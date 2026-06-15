@@ -80,8 +80,9 @@ In practice this fallback triggers for fewer than 5% of items.
 ```
 IE2026-HalDetect/
 ├── README.md
-├── baseline/
-│   └── SyedT1.ipynb          # Joint 3-statement prompt notebook (best run)
+├── Development/
+│   └── baseline
+    --- joint 3 prompt          # Joint 3-statement prompt notebook (best run)
 ```
 
 ---
