@@ -14,9 +14,11 @@ and which two are **False** (hallucinated). Exactly one statement per image is c
 | Run | Method | CI ↓ | Combined Acc ↑ | CFHR ↓ | Q+ Acc ↑ | Q- Acc ↑ |
 |-----|--------|:---:|:---:|:---:|:---:|:---:|
 | Run 1 (baseline) | Qwen2.5-VL-3B, per-statement, greedy, max_new_tokens=10 | 0.257 | 0.740 | — | 0.912 | 0.888 |
+| Run 3 | Qwen2.5-VL-3B, joint 3-statement prompt | 0.142 | 0.858 | 0.000 | 0.858 | 0.929 |
 | **Run 2 (ours, best)** | **Qwen2.5-VL-7B, joint 3-statement prompt** | **0.092** | **0.908** | **0.000** | **0.908** | **0.954** |
 
 **Run 2 reduces Contrastive Instability by 64.2% vs the baseline (0.257 → 0.092).**
+**Run 3 shows that joint prompting alone (without the 7B model) accounts for a significant portion of the gain, reducing CI by 44.7% vs the baseline (0.257 → 0.142).**
 
 ---
 
@@ -40,6 +42,15 @@ False. Answer with only one word: True or False.
 ```
 
 500 items × 3 statements = 1,500 forward passes per run.
+
+---
+
+### Run 3 — Joint 3-Statement Prompt, Small Model
+
+**Model:** `Qwen2.5-VL-3B-Instruct`, joint 3-statement prompt
+
+Same joint prompting strategy as Run 2 (see below), but using the 3B model instead of 7B.
+This run isolates the contribution of the joint prompting approach independently of model scale.
 
 ---
 
@@ -80,16 +91,19 @@ fallback for that item only (< 5% of items in practice).
 
 ## Why Joint Prompting Works
 
-| | Run 1 (baseline) | Run 2 (ours) |
-|---|---|---|
-| Model | Qwen2.5-VL-3B | Qwen2.5-VL-7B |
-| Passes per item | 3 | 1 |
-| Sees other statements | ❌ | ✅ |
-| Task constraint enforced | ❌ post-hoc | ✅ by design |
-| Can compare statements | ❌ | ✅ |
-| Reasoning | greedy, 10 tokens | chain-of-thought, 256 tokens |
-| CFHR | — | **0.000** |
+| | Run 1 (baseline) | Run 3 | Run 2 (ours) |
+|---|---|---|---|
+| Model | Qwen2.5-VL-3B | Qwen2.5-VL-3B | Qwen2.5-VL-7B |
+| Passes per item | 3 | 1 | 1 |
+| Sees other statements | ❌ | ✅ | ✅ |
+| Task constraint enforced | ❌ post-hoc | ✅ by design | ✅ by design |
+| Can compare statements | ❌ | ✅ | ✅ |
+| Reasoning | greedy, 10 tokens | chain-of-thought | chain-of-thought, 256 tokens |
+| CI | 0.257 | 0.142 | **0.092** |
+| CFHR | — | **0.000** | **0.000** |
 
+Run 3 vs Run 1 isolates the effect of **joint prompting** (same 3B model, −44.7% CI).
+Run 2 vs Run 3 isolates the effect of **model scale** (same joint prompt, −35.2% CI).
 A CFHR of 0.000 means every item where the model correctly identified the True statement
 also had both False statements correct — near-perfect internal consistency.
 
