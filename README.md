@@ -11,11 +11,12 @@ and which two are **False** (hallucinated). Exactly one statement per image is c
 
 ### Dev Phase (devtest, 500 items)
 
-| Run | Method | CI ↓ | Combined Acc ↑ | CFHR ↓ | Q+ Acc ↑ | Q- Acc ↑ |
+| Run | Method | CI ↓ | Combined Acc ↑ | CFHR ↓ | Q+ Acc ↑ | Q− Acc ↑ |
 |-----|--------|:---:|:---:|:---:|:---:|:---:|
 | Run 1 (baseline) | Qwen2.5-VL-3B, per-statement, greedy, max_new_tokens=10 | 0.257 | 0.740 | — | 0.912 | 0.888 |
 | Run 3 | Qwen2.5-VL-3B, joint 3-statement prompt, reason→answer | 0.142 | 0.858 | 0.000 | 0.858 | 0.929 |
 | Run 2 | Qwen2.5-VL-7B, joint 3-statement prompt, reason→answer | 0.092 | 0.908 | 0.000 | 0.908 | 0.954 |
+| Run 5 | Qwen2.5-VL-3B, joint 3-statement prompt, answer→reason | 0.082 | 0.918 | 0.000 | 0.918 | 0.959 |
 | **Run 4 (best)** | **Qwen2.5-VL-7B, joint 3-statement prompt, answer→reason** | **0.050** | **0.950** | **0.000** | **0.950** | **0.975** |
 
 **Run 4 reduces Contrastive Instability by 80.5% vs the baseline (0.257 → 0.050).**
@@ -27,6 +28,11 @@ The gains decompose cleanly across three orthogonal factors:
 | Joint prompting (same 3B model) | Run 1 → Run 3 | −44.7% |
 | Model scale 3B → 7B (same joint prompt) | Run 3 → Run 2 | −35.2% |
 | Answer-first vs reason-first (same 7B model) | Run 2 → Run 4 | −45.7% |
+| Answer-first vs reason-first (same 3B model) | Run 3 → Run 5 | −42.3% |
+
+> **Key finding (Run 5):** answer-first prompting on the 3B model (CI 0.082) outperforms
+> reason-first on the 7B model (CI 0.092), confirming that prompt order is a stronger
+> lever than model scale alone.
 
 ---
 
@@ -36,7 +42,17 @@ The gains decompose cleanly across three orthogonal factors:
 
 **Model:** `Qwen2.5-VL-3B-Instruct`, `QUANTIZE=False`, `max_new_tokens=10`
 
-Each statement is judged independently with a simple zero-shot prompt and greedy decoding:
+Each statement is judged independently with a simple zero-shot prompt and greedy decoding.
+The model scores each statement in isolation and the predicted label is taken as the
+index with the highest True probability:
+
+$$\hat{y}_i = \underset{j \in \{1,2,3\}}{\arg\max} \ P_\theta\!\left(\texttt{"True"} \mid \mathcal{I}_i,\ s_i^{(j)}\right)$$
+
+where $\mathcal{I}_i$ is the image and $s_i^{(j)}$ is the $j$-th statement scored alone.
+Because each statement is seen in isolation the model has no access to the one-true
+constraint and cannot perform contrastive reasoning across the three candidates.
+
+500 items × 3 statements = **1,500 forward passes**.
 
 ```
 You are checking a statement against an image for visual hallucination.
@@ -49,8 +65,6 @@ something that is not in the image or is contradicted by it (a hallucination), a
 False. Answer with only one word: True or False.
 ```
 
-500 items × 3 statements = 1,500 forward passes per run.
-
 ---
 
 ### Run 3 — Joint 3-Statement Prompt, Small Model
@@ -59,6 +73,16 @@ False. Answer with only one word: True or False.
 
 Same joint prompting strategy as Run 2 (see below), but using the 3B model instead of 7B.
 Isolates the contribution of joint prompting independently of model scale.
+
+All three statements are presented together so the model performs a single constrained
+selection. It generates a chain-of-thought $r_i$ and commits to the answer on the final
+line (reason → answer):
+
+$$\text{output}_i = \langle\, r_i,\ \texttt{Answer: }\hat{y}_i \,\rangle$$
+
+$$\hat{y}_i = f_\theta\!\left(\mathcal{I}_i,\ s_i^{(1)}, s_i^{(2)}, s_i^{(3)}\right) \in \{1,2,3\}$$
+
+500 items × 1 joint prompt = **500 forward passes**.
 
 ---
 
@@ -69,6 +93,14 @@ Isolates the contribution of joint prompting independently of model scale.
 **Core idea:** instead of judging each statement in isolation, show all three to the model
 simultaneously and ask it to identify which single one is grounded. This directly exploits
 the task constraint (exactly one is True) and forces contrastive reasoning across statements.
+
+The model selects the index with maximum posterior probability under the one-true constraint,
+then emits a chain-of-thought $r_i$ followed by the answer on the last line (reason → answer):
+
+$$\hat{y}_i = \underset{j \in \{1,2,3\}}{\arg\max} \
+    P_\theta\!\left(j \mid \mathcal{I}_i,\ s_i^{(1)}, s_i^{(2)}, s_i^{(3)},\ \text{``exactly one is True''}\right)$$
+
+$$\text{output}_i = \langle\, r_i,\ \texttt{Answer: }\hat{y}_i \,\rangle$$
 
 ```
 You are a visual fact-checker examining an image from the Arab world.
@@ -90,12 +122,57 @@ The model reasons step-by-step then commits to `Answer: X` on the final line.
 
 ---
 
+### Run 5 — Answer-First Joint Prompt, Small Model
+
+**Model:** `Qwen2.5-VL-3B-Instruct`, joint 3-statement prompt, answer→reason
+
+Same answer-first strategy as Run 4 (see below), but using the 3B model instead of 7B.
+Isolates the contribution of answer-first prompting independently of model scale.
+Achieves CI 0.082 — lower than reason-first on the 7B model (CI 0.092).
+
+The only change from Run 3 is the decoding order: the answer token is committed
+**before** the reasoning chain rather than after:
+
+$$\text{output}_i = \langle\, \texttt{Answer: }\hat{y}_i,\ r_i \,\rangle
+\quad \text{(answer → reason)}$$
+
+versus Run 3:
+
+$$\text{output}_i = \langle\, r_i,\ \texttt{Answer: }\hat{y}_i \,\rangle
+\quad \text{(reason → answer)}$$
+
+500 items × 1 joint prompt = **500 forward passes** (~20 min on T4).
+
+---
+
 ### Run 4 — Answer-First Joint Prompt (best)
 
 **Model:** `Qwen2.5-VL-7B-Instruct`, 4-bit NF4, `MAX_PIXELS=1024×28×28`, `max_new_tokens=256`
 
 **One change from Run 2:** the model commits to `Answer: X` on the **first** line, then
 justifies. In Run 2 the answer came last (reason→answer). Here it comes first (answer→reason).
+
+The answer token is emitted before the reasoning chain, preventing the model from drifting
+into hallucination-consistent reasoning mid-generation:
+
+$$\text{output}_i = \langle\, \texttt{Answer: }\hat{y}_i,\ r_i \,\rangle
+\quad \text{(answer → reason)}$$
+
+versus Run 2:
+
+$$\text{output}_i = \langle\, r_i,\ \texttt{Answer: }\hat{y}_i \,\rangle
+\quad \text{(reason → answer)}$$
+
+**Why this works:** the M²CQA paper (arXiv:2602.05437, QCRI/HBKU) found that
+reason-first prompting consistently increases counterfactual hallucination acceptance
+on Arab cultural imagery, while answering before justifying improves robustness.
+Run 4 confirms this finding on AynVQA: a single prompt inversion reduces CI by a
+further 45.7% on top of Run 2. Run 5 shows the same effect holds on the 3B model.
+
+The task constraint (exactly one True) is still **enforced by design** — the chosen index
+is marked True and the other two are automatically False, regardless of prompt order.
+
+**Speed:** 500 × 1 pass = 500 forward passes → ~40 minutes on T4.
 
 ```
 You are a visual fact-checker examining an image from the Arab world.
@@ -115,35 +192,24 @@ Instructions:
 Do not write anything before the Answer line.
 ```
 
-**Why this works:** the M²CQA paper (arXiv:2602.05437, QCRI/HBKU) found that
-reason-first prompting consistently increases counterfactual hallucination acceptance
-on Arab cultural imagery, while answering before justifying improves robustness.
-Run 4 confirms this finding on AynVQA: a single prompt inversion reduces CI by a
-further 45.7% on top of Run 2.
-
-The task constraint (exactly one True) is still **enforced by design** — the chosen index
-is marked True and the other two are automatically False, regardless of prompt order.
-
-**Speed:** 500 × 1 pass = 500 forward passes → ~40 minutes on T4.
-
 ---
 
 ## System Comparison
 
-| | Run 1 | Run 3 | Run 2 | Run 4 |
-|---|:---:|:---:|:---:|:---:|
-| Model | Qwen2.5-VL-3B | Qwen2.5-VL-3B | Qwen2.5-VL-7B | Qwen2.5-VL-7B |
-| Passes per item | 3 | 1 | 1 | 1 |
-| Sees other statements | ❌ | ✅ | ✅ | ✅ |
-| Task constraint enforced | ❌ post-hoc | ✅ by design | ✅ by design | ✅ by design |
-| Can compare statements | ❌ | ✅ | ✅ | ✅ |
-| Answer position | — | last | last | **first** |
-| Reasoning | greedy, 10 tok | CoT, 256 tok | CoT, 256 tok | CoT, 256 tok |
-| CI ↓ | 0.257 | 0.142 | 0.092 | **0.050** |
-| Combined Acc ↑ | 0.740 | 0.858 | 0.908 | **0.950** |
-| CFHR ↓ | — | **0.000** | **0.000** | **0.000** |
-| Q+ Acc ↑ | 0.912 | 0.858 | 0.908 | **0.950** |
-| Q− Acc ↑ | 0.888 | 0.929 | 0.954 | **0.975** |
+| | Run 1 | Run 3 | Run 2 | Run 5 | Run 4 |
+|---|:---:|:---:|:---:|:---:|:---:|
+| Model | Qwen2.5-VL-3B | Qwen2.5-VL-3B | Qwen2.5-VL-7B | Qwen2.5-VL-3B | Qwen2.5-VL-7B |
+| Passes per item | 3 | 1 | 1 | 1 | 1 |
+| Sees other statements | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Task constraint enforced | ❌ post-hoc | ✅ by design | ✅ by design | ✅ by design | ✅ by design |
+| Can compare statements | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Answer position | — | last | last | **first** | **first** |
+| Reasoning | greedy, 10 tok | CoT, 256 tok | CoT, 256 tok | CoT, 256 tok | CoT, 256 tok |
+| CI ↓ | 0.257 | 0.142 | 0.092 | 0.082 | **0.050** |
+| Combined Acc ↑ | 0.740 | 0.858 | 0.908 | 0.918 | **0.950** |
+| CFHR ↓ | — | **0.000** | **0.000** | **0.000** | **0.000** |
+| Q+ Acc ↑ | 0.912 | 0.858 | 0.908 | 0.918 | **0.950** |
+| Q− Acc ↑ | 0.888 | 0.929 | 0.954 | 0.959 | **0.975** |
 
 ---
 
@@ -155,10 +221,12 @@ IE2026-HalDetect/
 └── Development/
     ├── baseline/                   # Run 1: per-statement baseline (Qwen2.5-VL-3B)
     ├── joint-3-q7b/                # Run 2: joint prompt, reason→answer (Qwen2.5-VL-7B)
+    ├── answer-first-q3b/           # Run 5: joint prompt, answer→reason (Qwen2.5-VL-3B)
     └── answer-first-q7b/           # Run 4: joint prompt, answer→reason (Qwen2.5-VL-7B)
 ```
 
 Run 3 shares the notebook from `joint-3-q7b/` with `VLM_MODEL` switched to the 3B variant.
+Run 5 shares the notebook from `answer-first-q7b/` with `VLM_MODEL` switched to the 3B variant.
 
 ---
 
@@ -187,13 +255,14 @@ ds = load_dataset("QCRI/AynVQA-ArabicNLP26", "task1b_en", split="devtest")
 | Run 1 | `baseline/SyedT1.ipynb` | T4 | ~15 min |
 | Run 2 | `joint-3-q7b/joint-3-stat-qwen2p5vl7b.ipynb` | T4 | ~40 min |
 | Run 3 | same as Run 2, set `VLM_MODEL` to `Qwen/Qwen2.5-VL-3B-Instruct` | T4 | ~20 min |
+| Run 5 | same as Run 4, set `VLM_MODEL` to `Qwen/Qwen2.5-VL-3B-Instruct` | T4 | ~20 min |
 | Run 4 | `answer-first-q7b/run4-answer-first-qwen2p5vl7b.ipynb` | T4 | ~40 min |
 
 1. Upload the notebook to Kaggle
 2. Enable **T4 GPU** under Settings → Accelerator
 3. Add your HuggingFace token under **Add-ons → Secrets → HF_TOKEN**
 4. Set `SPLIT = 'dev'` to score locally; `SPLIT = 'devtest'` to produce a submission
-5. Click **Run All**, download `prediction_run4_en.zip`, submit to Codabench
+5. Click **Run All**, download the predictions zip, submit to Codabench
 
 ---
 
