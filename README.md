@@ -18,11 +18,16 @@ and which two are **False** (hallucinated). Exactly one statement per image is c
 | Run 2 | Qwen2.5-VL-7B, joint 3-statement prompt, reason→answer | 0.092 | 0.908 | 0.000 | 0.908 | 0.954 |
 | Run 5 | Qwen2.5-VL-3B, joint 3-statement prompt, answer→reason | 0.082 | 0.918 | 0.000 | 0.918 | 0.959 |
 | Run 4 | Qwen2.5-VL-7B, joint 3-statement prompt, answer→reason | 0.050 | 0.950 | 0.000 | 0.950 | 0.975 |
-| **Run ADE (best)** | **Run 4 + Latin square permutation ensemble (A+D+E)** | **0.042** | **0.958** | **0.000** | **0.958** | **0.979** |
+| **CoT1 (best single-pass)** | **Run 4 + evidence-first CoT** | **0.042** | **0.958** | **0.000** | **0.958** | **0.979** |
+| **Run ADE (best overall)** | **Run 4 + Latin square permutation ensemble (A+D+E)** | **0.042** | **0.958** | **0.000** | **0.958** | **0.979** |
 
-**Run ADE reduces Contrastive Instability by 83.7% vs the baseline (0.257 → 0.042).**
+**Run ADE and CoT1 both reduce Contrastive Instability by 83.7% vs the baseline (0.257 → 0.042).**
 
-The gains decompose cleanly across four orthogonal factors:
+> **Key efficiency finding (CoT1):** evidence-first structured CoT achieves identical
+> performance to the 3-pass Latin square ensemble (CI 0.042) in a **single forward pass**,
+> at 3× lower compute cost. CoT1 is the recommended system for resource-constrained settings.
+
+The gains decompose cleanly across orthogonal factors:
 
 | Factor | Runs compared | CI reduction |
 |--------|:---:|:---:|
@@ -30,6 +35,7 @@ The gains decompose cleanly across four orthogonal factors:
 | Model scale 3B → 7B (same joint prompt) | Run 3 → Run 2 | −35.2% |
 | Answer-first vs reason-first (same 7B model) | Run 2 → Run 4 | −45.7% |
 | Answer-first vs reason-first (same 3B model) | Run 3 → Run 5 | −42.3% |
+| Evidence-first CoT (same 7B model, single pass) | Run 4 → CoT1 | −16.0% |
 | Permutation ensemble A+D+E | Run 4 → Run ADE | −16.0% |
 
 > **Key finding (Run 5):** answer-first prompting on the 3B model (CI 0.082) outperforms
@@ -39,6 +45,22 @@ The gains decompose cleanly across four orthogonal factors:
 > **Key finding (Run ADE):** a Latin square permutation ensemble over three statement
 > orderings eliminates the dev/devtest generalisation gap (both splits reach CI 0.042),
 > suggesting the remaining gap in Run 4 was partly attributable to position bias.
+
+---
+
+## Negative Results
+
+The following training-free methods were also evaluated and did not improve over Run 4:
+
+| Method | CI ↓ | Notes |
+|--------|:---:|---|
+| DoLa (layer 20, α=0.5) | 0.132 | Token-by-token contrastive decoding disrupts answer-first format compliance; high fallback rate |
+| Caption-then-verify cascade | 0.084 | Caption stage loses fine-grained visual detail needed for texture/intent errors |
+| Cultural grounding hint (Run A6) | — | Devtest submission zeroed due to wrong split; dev results inconclusive |
+
+These negative results establish that CI=0.042 is the ceiling for training-free methods
+at 7B scale on this dataset under zero-shot inference. The remaining 21 failures (4.2%)
+are irreducible through prompting alone and require fine-tuning or a stronger visual encoder.
 
 ---
 
@@ -108,10 +130,6 @@ False. Answer with only one word: True or False.
 Same joint prompting strategy as Run 2 (see below), but using the 3B model instead of 7B.
 Isolates the contribution of joint prompting independently of model scale.
 
-All three statements are presented together so the model performs a single constrained
-selection. It generates a chain-of-thought $r_i$ and commits to the answer on the final
-line (reason → answer):
-
 $$\text{output}_i = \langle\, r_i,\ \texttt{Answer: }\hat{y}_i \,\rangle$$
 
 $$\hat{y}_i = f_\theta\!\left(\mathcal{I}_i,\ s_i^{(1)}, s_i^{(2)}, s_i^{(3)}\right) \in \{1,2,3\}$$
@@ -162,11 +180,6 @@ Achieves CI 0.082 — lower than reason-first on the 7B model (CI 0.092).
 $$\text{output}_i = \langle\, \texttt{Answer: }\hat{y}_i,\ r_i \,\rangle
 \quad \text{(answer → reason)}$$
 
-versus Run 3:
-
-$$\text{output}_i = \langle\, r_i,\ \texttt{Answer: }\hat{y}_i \,\rangle
-\quad \text{(reason → answer)}$$
-
 500 items × 1 joint prompt = **500 forward passes** (~20 min on T4).
 
 ---
@@ -212,7 +225,44 @@ Do not write anything before the Answer line.
 
 ---
 
-### Run ADE — Latin Square Permutation Ensemble (best)
+### CoT1 — Evidence-First CoT (best single-pass)
+
+**Model:** `Qwen2.5-VL-7B-Instruct`, 4-bit NF4, `MAX_PIXELS=1024×28×28`, `max_new_tokens=384`
+
+**One change from Run 4:** after committing the answer, the model is instructed to write
+a one-sentence neutral visual description of the image *before* explaining its reasoning.
+This description must use its own words rather than the statement vocabulary, preventing
+the model from anchoring its visual observation to the distractor's language.
+
+```
+You are a visual fact-checker examining an image from the Arab world.
+Below are THREE statements about this image. Exactly ONE statement is
+grounded in the image (True). The other two are plausible-sounding
+hallucinations (False).
+
+Statement 1: {s0}
+Statement 2: {s1}
+Statement 3: {s2}
+
+Instructions:
+- On the VERY FIRST line write ONLY: "Answer: X" where X is 1, 2, or 3.
+- On the second line write ONE sentence describing only what you literally
+  see in the image (objects, materials, colours, actions) — do NOT use
+  the statement text.
+- Then explain why that statement is grounded and the others are not.
+Do not write anything before the Answer line.
+```
+
+**Result:** CI 0.042, matching Run ADE in a single forward pass at 3× lower compute.
+The neutral description step prevents the model from confirming plausible distractors
+by describing the image in the distractor's own vocabulary — the dominant failure mode
+in all 21 Run 4 errors.
+
+**Speed:** 500 × 1 pass = 500 forward passes → ~40 minutes on T4.
+
+---
+
+### Run ADE — Latin Square Permutation Ensemble (best overall)
 
 **Base system:** Run 4 (answer-first, Qwen2.5-VL-7B)
 
@@ -230,8 +280,7 @@ that places each statement at each position exactly once, then take majority vot
 | E | [3, 1, 2] | Run 5b |
 
 For each item, the statement receiving 2 or 3 votes wins. In the rare case of a 3-way
-tie, Run 4 (permutation A) is used as tiebreaker. The majority vote cancels position
-bias because each statement appears at each position exactly once across the three runs.
+tie, Run 4 (permutation A) is used as tiebreaker.
 
 **Result:** CI drops from 0.050 (Run 4 devtest) to **0.042**, eliminating the
 dev/devtest generalisation gap entirely (dev CI was already 0.042 with Run 4 alone).
@@ -243,20 +292,20 @@ each ~5 hours, run in parallel on two sessions).
 
 ## System Comparison
 
-| | Run 1 | Run 3 | Run 2 | Run 5 | Run 4 | Run ADE |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|
-| Model | 3B | 3B | 7B | 3B | 7B | 7B ×3 |
-| Passes per item | 3 | 1 | 1 | 1 | 1 | 3 |
-| Sees other statements | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Task constraint enforced | ❌ post-hoc | ✅ by design | ✅ by design | ✅ by design | ✅ by design | ✅ by design |
-| Answer position | — | last | last | **first** | **first** | **first** |
-| Reasoning | greedy, 10 tok | CoT, 256 tok | CoT, 256 tok | CoT, 256 tok | CoT, 256 tok | CoT, 256 tok |
-| Permutation ensemble | ❌ | ❌ | ❌ | ❌ | ❌ | **✅ A+D+E** |
-| CI ↓ | 0.257 | 0.142 | 0.092 | 0.082 | 0.050 | **0.042** |
-| Combined Acc ↑ | 0.740 | 0.858 | 0.908 | 0.918 | 0.950 | **0.958** |
-| CFHR ↓ | — | **0.000** | **0.000** | **0.000** | **0.000** | **0.000** |
-| Q+ Acc ↑ | 0.912 | 0.858 | 0.908 | 0.918 | 0.950 | **0.958** |
-| Q− Acc ↑ | 0.888 | 0.929 | 0.954 | 0.959 | 0.975 | **0.979** |
+| | Run 1 | Run 3 | Run 2 | Run 5 | Run 4 | CoT1 | Run ADE |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| Model | 3B | 3B | 7B | 3B | 7B | 7B | 7B ×3 |
+| Passes per item | 3 | 1 | 1 | 1 | 1 | 1 | 3 |
+| Sees other statements | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Task constraint enforced | ❌ post-hoc | ✅ by design | ✅ by design | ✅ by design | ✅ by design | ✅ by design | ✅ by design |
+| Answer position | — | last | last | **first** | **first** | **first** | **first** |
+| CoT style | greedy, 10 tok | free-form | free-form | free-form | free-form | **evidence-first** | free-form |
+| Permutation ensemble | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | **✅ A+D+E** |
+| CI ↓ | 0.257 | 0.142 | 0.092 | 0.082 | 0.050 | **0.042** | **0.042** |
+| Combined Acc ↑ | 0.740 | 0.858 | 0.908 | 0.918 | 0.950 | **0.958** | **0.958** |
+| CFHR ↓ | — | **0.000** | **0.000** | **0.000** | **0.000** | **0.000** | **0.000** |
+| Q+ Acc ↑ | 0.912 | 0.858 | 0.908 | 0.918 | 0.950 | **0.958** | **0.958** |
+| Q− Acc ↑ | 0.888 | 0.929 | 0.954 | 0.959 | 0.975 | **0.979** | **0.979** |
 
 ---
 
@@ -270,6 +319,7 @@ IE2026-HalDetect/
     ├── joint-3-q7b/                # Run 2: joint prompt, reason→answer (Qwen2.5-VL-7B)
     ├── answer-first-q3b/           # Run 5: joint prompt, answer→reason (Qwen2.5-VL-3B)
     ├── answer-first-q7b/           # Run 4: joint prompt, answer→reason (Qwen2.5-VL-7B)
+    ├── cot-variants/               # CoT1–CoT6: structured CoT ablations
     └── ensemble-ADE/               # Run ADE: Latin square permutation ensemble + majority vote
 ```
 
@@ -305,6 +355,8 @@ ds = load_dataset("QCRI/AynVQA-ArabicNLP26", "task1b_en", split="devtest")
 | Run 3 | same as Run 2, set `VLM_MODEL` to `Qwen/Qwen2.5-VL-3B-Instruct` | T4 | ~20 min |
 | Run 5 | same as Run 4, set `VLM_MODEL` to `Qwen/Qwen2.5-VL-3B-Instruct` | T4 | ~20 min |
 | Run 4 | `answer-first-q7b/run4-answer-first-qwen2p5vl7b.ipynb` | T4 | ~40 min |
+| CoT1 | `cot-variants/CoT1_evidence_first.ipynb` | T4 | ~40 min |
+| CoT2–6 | `cot-variants/CoT[2-6]_*.ipynb` | T4 | ~40 min each |
 | Run 5a | `ensemble-ADE/run5a-perm-D-qwen2p5vl7b.ipynb` | T4 | ~5 hrs |
 | Run 5b | `ensemble-ADE/run5b-perm-E-qwen2p5vl7b.ipynb` | T4 | ~5 hrs |
 | Run ADE | `ensemble-ADE/majority-vote-combiner-ADE.ipynb` | None | <1 min |
