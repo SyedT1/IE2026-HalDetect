@@ -17,15 +17,20 @@ and which two are **False** (hallucinated). Exactly one statement per image is c
 | Run 3 | Qwen2.5-VL-3B, joint 3-statement prompt, reason→answer | 0.142 | 0.858 | 0.000 | 0.858 | 0.929 |
 | Run 2 | Qwen2.5-VL-7B, joint 3-statement prompt, reason→answer | 0.092 | 0.908 | 0.000 | 0.908 | 0.954 |
 | Run 5 | Qwen2.5-VL-3B, joint 3-statement prompt, answer→reason | 0.082 | 0.918 | 0.000 | 0.918 | 0.959 |
+| CoT2 | Run 4 + elimination-based CoT | 0.056 | 0.944 | 0.000 | 0.944 | 0.972 |
 | Run 4 | Qwen2.5-VL-7B, joint 3-statement prompt, answer→reason | 0.050 | 0.950 | 0.000 | 0.950 | 0.975 |
-| **CoT1 (best single-pass)** | **Run 4 + evidence-first CoT** | **0.042** | **0.958** | **0.000** | **0.958** | **0.979** |
+| CoT4 | Run 4 + devil's advocate CoT | 0.048 | 0.952 | 0.000 | 0.952 | 0.976 |
+| CoT3 | Run 4 + confidence-ranked CoT | 0.046 | 0.954 | 0.000 | 0.954 | 0.977 |
+| CoT1 (devtest) | Run 4 + evidence-first CoT | 0.044 | 0.956 | 0.000 | 0.956 | 0.978 |
+| **CoT5 (best single-pass)** | **Run 4 + attribute checklist CoT** | **0.042** | **0.958** | **0.000** | **0.958** | **0.979** |
 | **Run ADE (best overall)** | **Run 4 + Latin square permutation ensemble (A+D+E)** | **0.042** | **0.958** | **0.000** | **0.958** | **0.979** |
 
-**Run ADE and CoT1 both reduce Contrastive Instability by 83.7% vs the baseline (0.257 → 0.042).**
+**Run ADE and CoT5 both reduce Contrastive Instability by 83.7% vs the baseline (0.257 → 0.042).**
 
-> **Key efficiency finding (CoT1):** evidence-first structured CoT achieves identical
+> **Key efficiency finding (CoT5):** attribute checklist CoT achieves identical
 > performance to the 3-pass Latin square ensemble (CI 0.042) in a **single forward pass**,
-> at 3× lower compute cost. CoT1 is the recommended system for resource-constrained settings.
+> at 3× lower compute cost. CoT5 is the recommended system for resource-constrained settings.
+> CoT1 (evidence-first) achieves CI 0.044 on devtest, close behind.
 
 The gains decompose cleanly across orthogonal factors:
 
@@ -35,7 +40,10 @@ The gains decompose cleanly across orthogonal factors:
 | Model scale 3B → 7B (same joint prompt) | Run 3 → Run 2 | −35.2% |
 | Answer-first vs reason-first (same 7B model) | Run 2 → Run 4 | −45.7% |
 | Answer-first vs reason-first (same 3B model) | Run 3 → Run 5 | −42.3% |
-| Evidence-first CoT (same 7B model, single pass) | Run 4 → CoT1 | −16.0% |
+| Attribute checklist CoT (same 7B model, single pass) | Run 4 → CoT5 | −16.0% |
+| Evidence-first CoT (same 7B model, single pass) | Run 4 → CoT1 | −12.0% |
+| Devil's advocate CoT (same 7B model, single pass) | Run 4 → CoT4 | −4.0% |
+| Confidence-ranked CoT (same 7B model, single pass) | Run 4 → CoT3 | −8.0% |
 | Permutation ensemble A+D+E | Run 4 → Run ADE | −16.0% |
 
 > **Key finding (Run 5):** answer-first prompting on the 3B model (CI 0.082) outperforms
@@ -56,11 +64,17 @@ The following training-free methods were also evaluated and did not improve over
 |--------|:---:|---|
 | DoLa (layer 20, α=0.5) | 0.132 | Token-by-token contrastive decoding disrupts answer-first format compliance; high fallback rate |
 | Caption-then-verify cascade | 0.084 | Caption stage loses fine-grained visual detail needed for texture/intent errors |
+| CoT2 (elimination-based) | 0.056 | Falsification framing hurts vs Run 4; model anchors rebuttal reasoning to distractor vocabulary |
 | Cultural grounding hint (Run A6) | — | Devtest submission zeroed due to wrong split; dev results inconclusive |
 
 These negative results establish that CI=0.042 is the ceiling for training-free methods
 at 7B scale on this dataset under zero-shot inference. The remaining 21 failures (4.2%)
 are irreducible through prompting alone and require fine-tuning or a stronger visual encoder.
+
+> **Key finding (CoT2):** elimination-based CoT (CI 0.056) performs *worse* than free-form
+> Run 4 (CI 0.050), showing that falsification framing does not help when the model's
+> rebuttal reasoning remains anchored to the same language-prior vocabulary as the
+> distractor statements.
 
 ---
 
@@ -225,7 +239,34 @@ Do not write anything before the Answer line.
 
 ---
 
-### CoT1 — Evidence-First CoT (best single-pass)
+### CoT2 — Elimination-Based CoT (negative result)
+
+**Model:** `Qwen2.5-VL-7B-Instruct`, 4-bit NF4, `MAX_PIXELS=1024×28×28`, `max_new_tokens=384`
+
+**One change from Run 4:** after committing the answer, the model is instructed to
+eliminate the two false statements explicitly — explaining why each is ruled out —
+before confirming the grounded statement. The psychological framing shifts from
+confirmation (find the true one) to falsification (rule out the wrong ones).
+
+```
+Instructions:
+- On the VERY FIRST line write ONLY: "Answer: X" where X is 1, 2, or 3.
+- Then explain: which statement can you rule out first and why?
+  Which second and why? The remaining statement is grounded.
+Do not write anything before the Answer line.
+```
+
+**Result:** CI 0.056, *worse* than Run 4 (CI 0.050). Falsification framing hurts
+because the model's elimination reasoning remains anchored to distractor vocabulary,
+reinforcing the same language-prior errors it was meant to overcome. This is a clean
+negative result: the failure mode is not fixable by reframing the task as elimination
+when the underlying language prior is unchanged.
+
+**Speed:** 500 × 1 pass → ~40 minutes on T4.
+
+---
+
+### CoT1 — Evidence-First CoT
 
 **Model:** `Qwen2.5-VL-7B-Instruct`, 4-bit NF4, `MAX_PIXELS=1024×28×28`, `max_new_tokens=384`
 
@@ -253,10 +294,96 @@ Instructions:
 Do not write anything before the Answer line.
 ```
 
-**Result:** CI 0.042, matching Run ADE in a single forward pass at 3× lower compute.
+**Result:** CI 0.044 on devtest (dev CI was 0.042). Reduces CI by 12.0% over Run 4.
 The neutral description step prevents the model from confirming plausible distractors
 by describing the image in the distractor's own vocabulary — the dominant failure mode
 in all 21 Run 4 errors.
+
+**Speed:** 500 × 1 pass = 500 forward passes → ~40 minutes on T4.
+
+---
+
+### CoT4 — Devil's Advocate CoT
+
+**Model:** `Qwen2.5-VL-7B-Instruct`, 4-bit NF4, `MAX_PIXELS=1024×28×28`, `max_new_tokens=384`
+
+**One change from Run 4:** after committing the answer, the model steelmans each
+rejected statement — generating the best possible argument for each distractor —
+then explains why it still rejects it. This forces active engagement with wrong answers
+rather than ignoring them after picking the first plausible option.
+
+```
+Instructions:
+- On the VERY FIRST line write ONLY: "Answer: X" where X is 1, 2, or 3.
+- Then for each statement you did NOT choose, write:
+    "Why statement Y might seem correct: [best argument for it]
+     Why it is actually wrong: [specific visual evidence that contradicts it]"
+- Finally confirm why your chosen statement IS grounded.
+Do not write anything before the Answer line.
+```
+
+**Result:** CI 0.048, improving over Run 4 (CI 0.050) but weaker than CoT3 (0.046),
+CoT1 (0.044), and CoT5 (0.042). Steelmanning distractors helps but less than neutral
+description or structured attribute checking, suggesting the model's rebuttals remain
+anchored to the same language-prior reasoning that caused the original errors.
+
+**Speed:** 500 × 1 pass → ~40 minutes on T4.
+
+---
+
+### CoT3 — Confidence-Ranked CoT
+
+**Model:** `Qwen2.5-VL-7B-Instruct`, 4-bit NF4, `MAX_PIXELS=1024×28×28`, `max_new_tokens=384`
+
+**One change from Run 4:** after committing the answer, the model ranks all three
+statements by visual confidence — most grounded, less grounded, least grounded — with
+specific visual evidence for each. This prevents the model from stopping at the first
+plausible statement and forces comparison across all three on a common evidence scale.
+
+```
+Instructions:
+- On the VERY FIRST line write ONLY: "Answer: X" where X is 1, 2, or 3.
+- Then rank ALL THREE statements by how strongly the image supports them:
+    Most grounded: statement X — [specific visual evidence]
+    Less grounded: statement Y — [why the evidence is weak or absent]
+    Least grounded: statement Z — [why it is contradicted]
+Do not write anything before the Answer line.
+```
+
+**Result:** CI 0.046. Reduces CI by 8.0% over Run 4, confirming that forced ranking of
+all three statements improves over free-form CoT but not as strongly as structured
+per-attribute checking (CoT5) or neutral description (CoT1).
+
+**Speed:** 500 × 1 pass = 500 forward passes → ~40 minutes on T4.
+
+---
+
+### CoT5 — Attribute Checklist CoT (best single-pass)
+
+**Model:** `Qwen2.5-VL-7B-Instruct`, 4-bit NF4, `MAX_PIXELS=1024×28×28`, `max_new_tokens=384`
+
+**One change from Run 4:** after committing the answer, the model evaluates each
+statement against a fixed set of visual attribute dimensions — colour/texture,
+shape/form, and contextual evidence — before stating its conclusion. This structured
+checklist prevents the model from making holistic plausibility judgements and forces
+it to ground each decision in specific observed attributes.
+
+```
+Instructions:
+- On the VERY FIRST line write ONLY: "Answer: X" where X is 1, 2, or 3.
+- For each statement evaluate:
+    (a) What colour/texture evidence supports or contradicts it?
+    (b) What shape/form evidence?
+    (c) What contextual evidence?
+  Then state your conclusion.
+Do not write anything before the Answer line.
+```
+
+**Result:** CI 0.042, matching Run ADE in a single forward pass at 3× lower compute.
+The attribute checklist directly targets the texture ambiguity sub-pattern (silk vs cotton,
+masala chai vs saffron tea) that accounts for ~30% of Run 4 failures, forcing the model
+to reason over specific visual dimensions rather than confirming the most globally plausible
+statement.
 
 **Speed:** 500 × 1 pass = 500 forward passes → ~40 minutes on T4.
 
@@ -292,20 +419,20 @@ each ~5 hours, run in parallel on two sessions).
 
 ## System Comparison
 
-| | Run 1 | Run 3 | Run 2 | Run 5 | Run 4 | CoT1 | Run ADE |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| Model | 3B | 3B | 7B | 3B | 7B | 7B | 7B ×3 |
-| Passes per item | 3 | 1 | 1 | 1 | 1 | 1 | 3 |
-| Sees other statements | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Task constraint enforced | ❌ post-hoc | ✅ by design | ✅ by design | ✅ by design | ✅ by design | ✅ by design | ✅ by design |
-| Answer position | — | last | last | **first** | **first** | **first** | **first** |
-| CoT style | greedy, 10 tok | free-form | free-form | free-form | free-form | **evidence-first** | free-form |
-| Permutation ensemble | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | **✅ A+D+E** |
-| CI ↓ | 0.257 | 0.142 | 0.092 | 0.082 | 0.050 | **0.042** | **0.042** |
-| Combined Acc ↑ | 0.740 | 0.858 | 0.908 | 0.918 | 0.950 | **0.958** | **0.958** |
-| CFHR ↓ | — | **0.000** | **0.000** | **0.000** | **0.000** | **0.000** | **0.000** |
-| Q+ Acc ↑ | 0.912 | 0.858 | 0.908 | 0.918 | 0.950 | **0.958** | **0.958** |
-| Q− Acc ↑ | 0.888 | 0.929 | 0.954 | 0.959 | 0.975 | **0.979** | **0.979** |
+| | Run 1 | Run 3 | Run 2 | Run 5 | CoT2 | Run 4 | CoT4 | CoT3 | CoT1 | CoT5 | Run ADE |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| Model | 3B | 3B | 7B | 3B | 7B | 7B | 7B | 7B | 7B | 7B | 7B ×3 |
+| Passes per item | 3 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 3 |
+| Sees other statements | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Task constraint enforced | ❌ post-hoc | ✅ by design | ✅ by design | ✅ by design | ✅ by design | ✅ by design | ✅ by design | ✅ by design | ✅ by design | ✅ by design | ✅ by design |
+| Answer position | — | last | last | **first** | **first** | **first** | **first** | **first** | **first** | **first** | **first** |
+| CoT style | greedy, 10 tok | free-form | free-form | free-form | **elimination** | free-form | **devil's advocate** | **confidence-ranked** | **evidence-first** | **attribute checklist** | free-form |
+| Permutation ensemble | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | **✅ A+D+E** |
+| CI ↓ | 0.257 | 0.142 | 0.092 | 0.082 | 0.056 | 0.050 | 0.048 | 0.046 | 0.044 | **0.042** | **0.042** |
+| Combined Acc ↑ | 0.740 | 0.858 | 0.908 | 0.918 | 0.944 | 0.950 | 0.952 | 0.954 | 0.956 | **0.958** | **0.958** |
+| CFHR ↓ | — | **0.000** | **0.000** | **0.000** | **0.000** | **0.000** | **0.000** | **0.000** | **0.000** | **0.000** | **0.000** |
+| Q+ Acc ↑ | 0.912 | 0.858 | 0.908 | 0.918 | 0.944 | 0.950 | 0.952 | 0.954 | 0.956 | **0.958** | **0.958** |
+| Q− Acc ↑ | 0.888 | 0.929 | 0.954 | 0.959 | 0.972 | 0.975 | 0.976 | 0.977 | 0.978 | **0.979** | **0.979** |
 
 ---
 
@@ -356,7 +483,8 @@ ds = load_dataset("QCRI/AynVQA-ArabicNLP26", "task1b_en", split="devtest")
 | Run 5 | same as Run 4, set `VLM_MODEL` to `Qwen/Qwen2.5-VL-3B-Instruct` | T4 | ~20 min |
 | Run 4 | `answer-first-q7b/run4-answer-first-qwen2p5vl7b.ipynb` | T4 | ~40 min |
 | CoT1 | `cot-variants/CoT1_evidence_first.ipynb` | T4 | ~40 min |
-| CoT2–6 | `cot-variants/CoT[2-6]_*.ipynb` | T4 | ~40 min each |
+| CoT2 | `cot-variants/CoT2_elimination.ipynb` | T4 | ~40 min |
+| CoT3–6 | `cot-variants/CoT[3-6]_*.ipynb` | T4 | ~40 min each |
 | Run 5a | `ensemble-ADE/run5a-perm-D-qwen2p5vl7b.ipynb` | T4 | ~5 hrs |
 | Run 5b | `ensemble-ADE/run5b-perm-E-qwen2p5vl7b.ipynb` | T4 | ~5 hrs |
 | Run ADE | `ensemble-ADE/majority-vote-combiner-ADE.ipynb` | None | <1 min |
