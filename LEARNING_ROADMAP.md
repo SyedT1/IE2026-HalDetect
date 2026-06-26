@@ -63,6 +63,48 @@ natural preference pairs.
 
 ---
 
+## B*. Reinforcement Learning (RL) Fine-Tuning — strong fit, paper novelty
+
+DPO above is the *RL-free* shortcut. True RL optimizes the model against a
+**reward**. Our data makes reward trivial: we know the correct statement, so
+reward is **verifiable by rule** — no reward model to train.
+
+### Core RL concepts to learn first
+- **policy / reward / rollout / advantage** — the basic RL loop.
+- **PPO** — the classic stable policy-gradient algorithm (basis of RLHF).
+- **reward design** — what we score and how.
+- **reward hacking** — model gets the reward without the right reason (e.g.
+  right answer, wrong/empty reasoning). Must guard against this.
+- **KL penalty** — keep the tuned model close to the base so it doesn't degrade.
+
+### B*1. RLHF / PPO
+- **What:** train a reward model from human prefs, then PPO-optimize against it.
+- **Why here:** heavy, unstable, needs a reward model — usually **overkill** for
+  this task. Know it as background.
+- **Learn:** PPO, reward model, KL control.
+
+### B*2. GRPO / RLVR (RL with Verifiable Reward) ⭐ best RL fit
+- **What:** GRPO drops the reward model; uses a **rule-based reward** and
+  group-relative advantages. RLVR = same idea with a verifiable check.
+- **Why here:** our labels give a free, exact reward:
+  ```
+  reward = +1 if the statement the model marks True is the gold-correct one, else 0
+  ```
+  No reward model needed. Same family that trained DeepSeek-R1's reasoning.
+- **Learn:** GRPO objective, group sampling, rule reward functions.
+- **Tools:** `trl` GRPOTrainer.
+- **Watch:** reward hacking — also reward the *justification* quality, not just
+  the final pick, or the model learns to guess.
+
+### B*3. RLAIF (AI feedback) — fallback
+- **What:** use an AI judge for reward when no rule/label exists.
+- **Why here:** less relevant (we have labels), but useful for scoring reasoning.
+
+**Paper angle:** "SFT → GRPO/RLVR" is a timely, strong contribution; the
+verifiable reward from contrastive labels is a clean, defensible setup.
+
+---
+
 ## C. Test-Time Methods — no training, but extra compute
 
 ### C1. Self-consistency / ensembling
@@ -114,8 +156,9 @@ natural preference pairs.
 1. How VLMs work + why they hallucinate   (foundation — Section "core concepts")
 2. QLoRA-SFT on the 3,000 train items      (A2)  ← biggest expected payoff
 3. DPO on contrastive pairs                (B1)  ← stack on top of SFT
-4. (optional) VCD / RAG / region-crop      (C2, C3, D)  ← novelty for the paper
-5. Rigorous eval + ablations throughout    (E)
+4. GRPO / RLVR with verifiable reward      (B*2) ← RL novelty, labels = free reward
+5. (optional) VCD / RAG / region-crop      (C2, C3, D)  ← extra novelty
+6. Rigorous eval + ablations throughout    (E)
 ```
 
 ---
@@ -125,6 +168,11 @@ natural preference pairs.
 - **QLoRA** — Dettmers et al., 2023 (4-bit fine-tuning).
 - **LoRA** — Hu et al., 2021.
 - **DPO** — Rafailov et al., 2023.
+- **PPO** — Schulman et al., 2017 (arXiv:1707.06347).
+- **RLHF / InstructGPT** — Ouyang et al., 2022 (arXiv:2203.02155).
+- **GRPO** — DeepSeekMath, Shao et al., 2024 (arXiv:2402.03300).
+- **RLVR / DeepSeek-R1** — 2025 (arXiv:2501.12948, RL with verifiable reward).
+- **RL intro** — OpenAI Spinning Up (spinningup.openai.com).
 - **VCD** — Leng et al., 2023 (visual contrastive decoding for VLM hallucination).
 - **DoLa** — Chuang et al., 2023 (layer contrastive decoding).
 - **POPE / CHAIR** — standard VLM hallucination benchmarks (concepts to know).

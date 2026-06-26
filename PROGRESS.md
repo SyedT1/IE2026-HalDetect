@@ -33,7 +33,8 @@ Order = learn top-down. Tick when comfortable.
 | 3 | Decoding: greedy/sampling, contrastive decoding | ⬜ | [VCD](https://arxiv.org/abs/2311.16922) · [DoLa](https://arxiv.org/abs/2309.03883) |
 | 4 | Quantization (4-bit NF4) + PEFT basics | ⬜ | [bitsandbytes docs](https://huggingface.co/docs/bitsandbytes) · [PEFT docs](https://huggingface.co/docs/peft) |
 | 5 | LoRA / QLoRA fine-tuning | ⬜ | [LoRA](https://arxiv.org/abs/2106.09685) · [QLoRA](https://arxiv.org/abs/2305.14314) |
-| 6 | Alignment: RLHF → DPO and variants | ⬜ | [DPO](https://arxiv.org/abs/2305.18290) · [ORPO](https://arxiv.org/abs/2403.07691) · [KTO](https://arxiv.org/abs/2402.01306) |
+| 6 | Preference tuning (RL-free): DPO, ORPO, KTO | ⬜ | [DPO](https://arxiv.org/abs/2305.18290) · [ORPO](https://arxiv.org/abs/2403.07691) · [KTO](https://arxiv.org/abs/2402.01306) |
+| 6b | RL fine-tuning: RLHF/PPO → **GRPO / RLVR**, reward design, reward hacking | ⬜ | [RL intro](https://spinningup.openai.com) · [PPO](https://arxiv.org/abs/1707.06347) · [RLHF](https://arxiv.org/abs/2203.02155) · [GRPO](https://arxiv.org/abs/2402.03300) · [RLVR/R1](https://arxiv.org/abs/2501.12948) |
 | 7 | Hallucination benchmarks (POPE, CHAIR) + our CI metric | ⬜ | [POPE](https://arxiv.org/abs/2305.10355) · [CHAIR](https://arxiv.org/abs/1809.02156) |
 | 8 | Grounding: hard negatives & contrastive pairs (our data shape) | ⬜ | (see DPO + survey above) |
 | 9 | Our model internals | ⬜ | [Qwen2.5-VL report](https://arxiv.org/abs/2502.13923) |
@@ -84,6 +85,7 @@ Ordered by expected payoff. This is where new work goes.
 | T1 | **QLoRA-SFT** Qwen2.5-VL-7B on 3,000 train | beat CI 0.042 | ⬜ | concepts 4–5 |
 | T2 | **DPO** on contrastive (true vs false) pairs | cut residual hallucination | ⬜ | T1 |
 | T3 | ORPO / KTO alternative to T2 | cheaper preference tuning | ⬜ | concept 6 |
+| T10 | **GRPO / RLVR** — RL with verifiable reward (+1 if picks correct statement) | RL grounding, no reward model needed (labels = reward) | ⬜ | T1, concept 6b |
 | T4 | **VCD** (image-distortion contrastive decoding) | suppress language prior, no training | ⬜ | concept 3 |
 | T5 | **RAG**: inject Arab-cultural facts | fix fine-factual errors (flag/dress) | ⬜ | concept 1 |
 | T6 | Region crop/zoom augmentation | fix texture/geometry perception | ⬜ | — |
