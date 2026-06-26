@@ -1,0 +1,7 @@
+# GPU inference deps (Qwen2.5-VL). Use on Kaggle T4 (16GB) — the notebooks
+# pip-install these inline, so this file just documents the pinned set.
+transformers>=4.49.0
+accelerate
+bitsandbytes
+qwen-vl-utils
+torch          # provided by the Kaggle GPU image

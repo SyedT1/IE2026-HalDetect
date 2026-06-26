@@ -1,0 +1,50 @@
+[
+  {
+    "file": "samples/sample1.jpg",
+    "country": "Algeria",
+    "category": "Objects, Materials & Clothing",
+    "subcategory": "Everyday Objects",
+    "statements": [
+      "Islamic art is prominently featured in this image. True or False?",
+      "Abstract art is prominently featured in this image. True or False?",
+      "Renaissance art is prominently featured in this image. True or False?"
+    ],
+    "true_index": 0
+  },
+  {
+    "file": "samples/sample2.jpg",
+    "country": "Algeria",
+    "category": "People, Society & Education",
+    "subcategory": "Social Interaction",
+    "statements": [
+      "The traditional scale is most closely associated with good fortune in Chinese tea culture. True or False?",
+      "The carved wooden frog sculpture is most closely associated with good fortune in Chinese tea culture. True or False?",
+      "The white ceramic teacups are most closely associated with good fortune in Chinese tea culture. True or False?"
+    ],
+    "true_index": 1
+  },
+  {
+    "file": "samples/sample3.jpg",
+    "country": "Algeria",
+    "category": "Sports & Recreation",
+    "subcategory": "Traditional Sports",
+    "statements": [
+      "The tug-of-war game is taking place on a beach. True or False?",
+      "The tug-of-war game is taking place in a military base courtyard. True or False?",
+      "The tug-of-war game is taking place on a ship deck. True or False?"
+    ],
+    "true_index": 2
+  },
+  {
+    "file": "samples/sample4.jpg",
+    "country": "Algeria",
+    "category": "Geography, Buildings & Landmarks",
+    "subcategory": "Famous Landmarks",
+    "statements": [
+      "The green sign in the image displays text in French and Spanish. True or False?",
+      "The green sign in the image displays text in Arabic and French. True or False?",
+      "The green sign in the image displays text in Arabic and English. True or False?"
+    ],
+    "true_index": 1
+  }
+]
