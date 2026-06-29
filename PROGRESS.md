@@ -76,13 +76,25 @@ Order = learn top-down. Tick when comfortable.
 
 ---
 
+### T1a result (fast test, 100 dev, MAX_PIXELS=512×28×28)
+| | CI ↓ | Acc ↑ |
+|---|:--:|:--:|
+| Baseline (3B answer-first = Run 5) | 0.0800 | 0.9200 |
+| QLoRA-SFT (200 train, 3 ep, target="Answer: X") | 0.0800 | 0.9200 |
+
+Diagnostic: **6/100 predictions changed, 3 fixed / 3 broken → net zero.**
+- Baseline reproduces README Run 5 (0.082) → pipeline + scorer validated.
+- Fine-tune **does affect outputs** (not a no-op) but only as noise at this scale.
+- Lesson: weak signal (format-only target) + tiny data (200) + coarse eval (100)
+  can't move a strong baseline. Need fuller data + full 500 dev, then likely DPO.
+
 ## 3. Experiments — TODO (the research plan)
 
 Ordered by expected payoff. This is where new work goes.
 
 | # | Experiment | Goal | Status | Depends on |
 |---|---|---|:--:|---|
-| T1a | **QLoRA-SFT fast test** — Qwen2.5-VL-3B, 200 train / 100 dev, Colab T4 | validate pipeline, baseline vs FT delta | 🟡 notebook ready: `Development/finetune-qlora-q3b/qlora-3b-colab.ipynb` | concepts 4–5 |
+| T1a | **QLoRA-SFT fast test** — Qwen2.5-VL-3B, 200 train / 100 dev, Colab T4 | validate pipeline, baseline vs FT delta | ✅ done — see result below | concepts 4–5 |
 | T1 | **QLoRA-SFT** Qwen2.5-VL-7B on 3,000 train | beat CI 0.042 | ⬜ | T1a |
 | T2 | **DPO** on contrastive (true vs false) pairs | cut residual hallucination | ⬜ | T1 |
 | T3 | ORPO / KTO alternative to T2 | cheaper preference tuning | ⬜ | concept 6 |
