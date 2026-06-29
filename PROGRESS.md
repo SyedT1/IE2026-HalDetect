@@ -82,7 +82,8 @@ Ordered by expected payoff. This is where new work goes.
 
 | # | Experiment | Goal | Status | Depends on |
 |---|---|---|:--:|---|
-| T1 | **QLoRA-SFT** Qwen2.5-VL-7B on 3,000 train | beat CI 0.042 | ⬜ | concepts 4–5 |
+| T1a | **QLoRA-SFT fast test** — Qwen2.5-VL-3B, 200 train / 100 dev, Colab T4 | validate pipeline, baseline vs FT delta | 🟡 notebook ready: `Development/finetune-qlora-q3b/qlora-3b-colab.ipynb` | concepts 4–5 |
+| T1 | **QLoRA-SFT** Qwen2.5-VL-7B on 3,000 train | beat CI 0.042 | ⬜ | T1a |
 | T2 | **DPO** on contrastive (true vs false) pairs | cut residual hallucination | ⬜ | T1 |
 | T3 | ORPO / KTO alternative to T2 | cheaper preference tuning | ⬜ | concept 6 |
 | T10 | **GRPO / RLVR** — RL with verifiable reward (+1 if picks correct statement) | RL grounding, no reward model needed (labels = reward) | ⬜ | T1, concept 6b |
