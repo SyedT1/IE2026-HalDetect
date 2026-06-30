@@ -26,15 +26,22 @@ Speed-optimized rebuild after free-Colab GPU limits. Key changes:
 Run top-to-bottom. On disconnect, re-run from the top — finished steps load from
 Drive cache / checkpoints.""")
 
-md("""## 1. Install Unsloth
-If Colab asks to **restart session** after this, restart, then run from cell 2.""")
+md("""## 1. Install Unsloth (with torchao fix)
+
+**Known Colab issue:** `pip install unsloth` pulls a `torchao` wheel built for the
+wrong Python (a py3.10 `.so` on Colab's py3.12) + mismatched torch. That crashes
+`import unsloth` with `_wrap_tensor_autograd`. We **uninstall torchao** — Unsloth
+runs fine without it for bnb-4bit vision finetuning.
+
+If cell 4 still errors after this, do **Runtime → Restart session**, then run from
+cell 2 (do NOT re-run cell 1).""")
 code("""import torch
 assert torch.cuda.is_available(), 'No GPU! Runtime > Change runtime type > T4 GPU'
-print('GPU:', torch.cuda.get_device_name(0))
-!pip install -q unsloth
-# qwen-vl-utils for the eval path (image loading). Unsloth pulls peft/trl/bitsandbytes.
-!pip install -q qwen-vl-utils
-print('Install done.')""")
+print('GPU:', torch.cuda.get_device_name(0), '| torch', torch.__version__)
+!pip install -q unsloth qwen-vl-utils
+# Remove the mismatched torchao that breaks `import unsloth` on Colab py3.12.
+!pip uninstall -q -y torchao
+print('Install done. Run cell 2 onward (no need to re-run this cell).')""")
 
 md("""## 2. Mount Drive + paths
 Uses *_unsloth folders so earlier runs stay intact.""")
