@@ -59,7 +59,7 @@ from huggingface_hub import hf_hub_download
 from tqdm.auto import tqdm
 
 REPO = 'QCRI/AynVQA-ArabicNLP26'
-N_TRAIN, N_DEV = 3000, 500     # <- full data. Lower N_TRAIN (e.g. 2000) for speed.
+N_TRAIN, N_DEV = 1000, 500     # fits a ~3h free window. Raise to 2000/3000 with more GPU time.
 
 def load_split(split):
     p = hf_hub_download(REPO, filename=f'task1b/{split}_en.jsonl', repo_type='dataset')
@@ -93,7 +93,7 @@ model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
 print('Model loaded in 4-bit. MAX_PIXELS =', MAX_PIXELS)""")
 
 md("""## 5. Helpers: prompt, parser, CI scorer (same as fast test)""")
-code('''import re
+code('''import re, csv, os
 from qwen_vl_utils import process_vision_info
 
 JOINT_PROMPT = (
@@ -123,33 +123,38 @@ def parse_answer(raw):
     return None
 
 @torch.no_grad()
-def generate(messages, max_new_tokens=128):
+def generate(messages, max_new_tokens=12):    # only the "Answer: X" line -> ~5x faster eval
     text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
     imgs, _ = process_vision_info(messages)
     inp = processor(text=[text], images=imgs, return_tensors='pt', padding=True).to(model.device)
     out = model.generate(**inp, max_new_tokens=max_new_tokens, do_sample=False)
     return processor.decode(out[0][inp.input_ids.shape[1]:], skip_special_tokens=True).strip()
 
-def evaluate(items, img_path, csv_out, force=False):
-    import csv, os
-    if os.path.exists(csv_out) and not force:
-        rows = list(csv.DictReader(open(csv_out)))
-        ci = 1 - sum(int(r['correct']) for r in rows) / len(rows)
-        print(f'Loaded cached {csv_out} -> CI={ci:.4f} ({len(rows)} items)')
-        return ci
-    rows = []
-    for r in tqdm(items, desc='eval'):
+def evaluate(items, img_path, csv_out):
+    """Per-item save + skip already-done ids -> fast and disconnect-resumable."""
+    done = set()
+    if os.path.exists(csv_out):
+        done = {r['id'] for r in csv.DictReader(open(csv_out))}
+    todo = [r for r in items if r['id'] not in done]
+    print(f'{len(done)} already done, {len(todo)} to go')
+    new_file = not os.path.exists(csv_out)
+    f = open(csv_out, 'a', newline='')
+    w = csv.DictWriter(f, fieldnames=['id','gold','pred','correct'])
+    if new_file:
+        w.writeheader(); f.flush()
+    for r in tqdm(todo, desc='eval'):
         gold = r['labels'].index(True)
         pred = parse_answer(generate(build_user_messages(img_path[r['image']], r['statements'])))
         if pred is None: pred = 0
-        rows.append({'id': r['id'], 'gold': gold, 'pred': pred, 'correct': int(pred == gold)})
-    with open(csv_out, 'w', newline='') as f:
-        w = csv.DictWriter(f, fieldnames=['id','gold','pred','correct']); w.writeheader(); w.writerows(rows)
-    ci = 1 - sum(x['correct'] for x in rows) / len(rows)
-    print(f'Saved {csv_out} -> CI={ci:.4f} ({len(rows)} items)')
+        w.writerow({'id': r['id'], 'gold': gold, 'pred': pred, 'correct': int(pred == gold)})
+        f.flush()    # save each item immediately
+    f.close()
+    rows = list(csv.DictReader(open(csv_out)))
+    ci = 1 - sum(int(x['correct']) for x in rows) / len(rows)
+    print(f'{csv_out} -> CI={ci:.4f} ({len(rows)} items)')
     return ci
 
-print('Helpers ready.')''')
+print('Helpers ready (fast 12-token + resumable eval).')''')
 
 md("""## 6. ⭐ Baseline eval — full 500 dev (no fine-tune)
 Slow (~500 generations). Saved to Drive; re-running loads the cache.""")
@@ -223,7 +228,7 @@ md("""## 9. ⭐ Fine-tuned eval — full 500 dev""")
 code("""model.config.use_cache = True
 model.gradient_checkpointing_disable()
 model.eval()
-ci_ft = evaluate(dev, img_path, f'{PREDS_DIR}/ft_dev.csv', force=True)
+ci_ft = evaluate(dev, img_path, f'{PREDS_DIR}/ft_dev.csv')
 print(f'\\nFINE-TUNED CI = {ci_ft:.4f}  (accuracy = {1-ci_ft:.4f})')""")
 
 md("## 10. Compare")
