@@ -69,7 +69,7 @@ from huggingface_hub import hf_hub_download
 from tqdm.auto import tqdm
 
 REPO = 'QCRI/AynVQA-ArabicNLP26'
-N_TRAIN, N_DEV = 2000, 500
+N_TRAIN, N_DEV = 1500, 500     # test run. Raise to 3000 (full) once this works end-to-end.
 
 def load_split(split):
     p = hf_hub_download(REPO, filename=f'task1b/{split}_en.jsonl', repo_type='dataset')
