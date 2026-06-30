@@ -170,11 +170,10 @@ def evaluate(items, img_path, csv_out):
 
 print('Helpers ready.')''')
 
-md("""## 6. ⭐ Baseline eval (no fine-tune) — full 500 dev
-Fast (12-token gen) + resumable. Saved to Drive.""")
-code("""FastVisionModel.for_inference(model)
-ci_baseline = evaluate(dev, img_path, f'{PREDS_DIR}/baseline_dev.csv')
-print(f'\\nBASELINE CI = {ci_baseline:.4f}  (accuracy = {1-ci_baseline:.4f})')""")
+md("""## 6. Baseline — run separately (not here)
+To save GPU, the no-fine-tune baseline is computed once in
+**qlora-3b-baseline-colab.ipynb** (on a different account). Paste its CI into the
+Compare cell below as `BASELINE_CI`. No baseline GPU run happens in this notebook.""")
 
 md("""## 7. Add LoRA adapters (Unsloth)""")
 code("""model = FastVisionModel.get_peft_model(
@@ -239,35 +238,38 @@ ci_ft = evaluate(dev, img_path, f'{PREDS_DIR}/ft_dev.csv')
 print(f'\\nFINE-TUNED CI = {ci_ft:.4f}  (accuracy = {1-ci_ft:.4f})')""")
 
 md("## 11. Compare")
-code("""print('%-14s %9s %9s' % ('', 'CI', 'Acc'))
-print('-' * 34)
-print('%-14s %9.4f %9.4f' % ('Baseline',  ci_baseline, 1 - ci_baseline))
-print('%-14s %9.4f %9.4f' % ('QLoRA-SFT', ci_ft,       1 - ci_ft))
-delta = ci_ft - ci_baseline
-print('-' * 34)
-print('Delta CI: %+.4f  ->' % delta,
-      'BETTER (fine-tune helped)' if delta < 0 else 'no improvement')""")
+code("""# Baseline is computed in the separate baseline-only notebook. Paste its CI here:
+BASELINE_CI = None        # e.g. 0.0800
+
+print('Fine-tuned   CI = %.4f   Acc = %.4f' % (ci_ft, 1 - ci_ft))
+if BASELINE_CI is not None:
+    d = ci_ft - BASELINE_CI
+    print('Baseline     CI = %.4f   Acc = %.4f' % (BASELINE_CI, 1 - BASELINE_CI))
+    print('Delta CI: %+.4f  ->' % d,
+          'BETTER (fine-tune helped)' if d < 0 else 'no improvement')
+else:
+    print('Set BASELINE_CI above (from the baseline notebook) to compute the delta.')""")
 
 md("""## 12. Save paper results bundle (download this folder)""")
 code("""import json, shutil
-b = {r['id']: r for r in csv.DictReader(open(f'{PREDS_DIR}/baseline_dev.csv'))}
-f = {r['id']: r for r in csv.DictReader(open(f'{PREDS_DIR}/ft_dev.csv'))}
-ids = [i for i in b if i in f]
-changed = sum(b[i]['pred'] != f[i]['pred'] for i in ids)
-fixed   = sum(b[i]['correct']=='0' and f[i]['correct']=='1' for i in ids)
-broken  = sum(b[i]['correct']=='1' and f[i]['correct']=='0' for i in ids)
 results = {
     'experiment': 'Unsloth QLoRA-SFT (Qwen2.5-VL-3B)',
     'n_train': len(train), 'n_dev': len(dev), 'max_pixels': MAX_PIXELS,
     'epochs': 3, 'lr': 2e-4, 'grad_accum': 8, 'lora_r': 8, 'lora_alpha': 16,
-    'ci_baseline': round(ci_baseline,4), 'acc_baseline': round(1-ci_baseline,4),
     'ci_finetuned': round(ci_ft,4), 'acc_finetuned': round(1-ci_ft,4),
-    'delta_ci': round(ci_ft-ci_baseline,4),
-    'changed': int(changed), 'fixed': int(fixed), 'broken': int(broken),
+    'baseline_ci': BASELINE_CI,
+    'delta_ci': (round(ci_ft - BASELINE_CI, 4) if BASELINE_CI is not None else None),
 }
+bcsv = f'{PREDS_DIR}/baseline_dev.csv'
+if os.path.exists(bcsv):
+    b = {r['id']: r for r in csv.DictReader(open(bcsv))}
+    f = {r['id']: r for r in csv.DictReader(open(f'{PREDS_DIR}/ft_dev.csv'))}
+    ids = [i for i in b if i in f]
+    results['changed'] = int(sum(b[i]['pred'] != f[i]['pred'] for i in ids))
+    results['fixed']   = int(sum(b[i]['correct']=='0' and f[i]['correct']=='1' for i in ids))
+    results['broken']  = int(sum(b[i]['correct']=='1' and f[i]['correct']=='0' for i in ids))
 with open(f'{RESULTS_DIR}/unsloth_results.json','w') as fh: json.dump(results, fh, indent=2)
-shutil.copy(f'{PREDS_DIR}/baseline_dev.csv', f'{RESULTS_DIR}/unsloth_baseline_dev.csv')
-shutil.copy(f'{PREDS_DIR}/ft_dev.csv',       f'{RESULTS_DIR}/unsloth_ft_dev.csv')
+shutil.copy(f'{PREDS_DIR}/ft_dev.csv', f'{RESULTS_DIR}/unsloth_ft_dev.csv')
 print(json.dumps(results, indent=2))
 print('\\nDOWNLOAD for the paper ->', RESULTS_DIR)""")
 
