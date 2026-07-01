@@ -88,14 +88,28 @@ Diagnostic: **6/100 predictions changed, 3 fixed / 3 broken → net zero.**
 - Lesson: weak signal (format-only target) + tiny data (200) + coarse eval (100)
   can't move a strong baseline. Need fuller data + full 500 dev, then likely DPO.
 
+### T1b result (3B scaled, 1500 train / 500 dev @768px, Colab)
+| | CI ↓ | Acc ↑ |
+|---|:--:|:--:|
+| Baseline (matched: 500 dev @768px) | 0.096 | 0.904 |
+| QLoRA-SFT (1500 train, **1.6/3 epochs**, target="Answer: X") | **0.062** | **0.938** |
+
+**Delta CI −0.034 (≈ −35% relative error; ~48→31 wrong of 500).** First real gain.
+- Reverses T1a's null: bigger train (1500 vs 200) + full 500-dev eval exposed the signal.
+- Achieved with only partial training (GPU limit) — full 3 epochs / 3000 / 1024px may improve further.
+- 3B fine-tuned (0.062) now beats teammate's 3B baseline (0.082); trending toward 7B systems (CoT5 0.042).
+- Baseline computed separately (account 1); training ran baseline-free (3-account split).
+
 ## 3. Experiments — TODO (the research plan)
 
 Ordered by expected payoff. This is where new work goes.
 
 | # | Experiment | Goal | Status | Depends on |
 |---|---|---|:--:|---|
-| T1a | **QLoRA-SFT fast test** — Qwen2.5-VL-3B, 200 train / 100 dev, Colab T4 | validate pipeline, baseline vs FT delta | ✅ done — see result below | concepts 4–5 |
-| T1 | **QLoRA-SFT** Qwen2.5-VL-7B on 3,000 train | beat CI 0.042 | ⬜ | T1a |
+| T1a | **QLoRA-SFT fast test** — Qwen2.5-VL-3B, 200 train / 100 dev, Colab T4 | validate pipeline, baseline vs FT delta | ✅ done — net zero (too small) | concepts 4–5 |
+| T1b | **QLoRA-SFT 3B scaled** — 1500 train / 500 dev @768px, Colab | first real delta | ✅ **CI 0.096→0.062 (−35% err)** even at 1.6/3 epochs | T1a |
+| T1c | **QLoRA-SFT 3B full** — 3000 train, 3 full epochs, @1024px | push the 3B gain further | ⬜ | T1b |
+| T1 | **QLoRA-SFT** Qwen2.5-VL-7B on 3,000 train | beat CI 0.042 | ⬜ | T1b |
 | T2 | **DPO** on contrastive (true vs false) pairs | cut residual hallucination | ⬜ | T1 |
 | T3 | ORPO / KTO alternative to T2 | cheaper preference tuning | ⬜ | concept 6 |
 | T10 | **GRPO / RLVR** — RL with verifiable reward (+1 if picks correct statement) | RL grounding, no reward model needed (labels = reward) | ⬜ | T1, concept 6b |
