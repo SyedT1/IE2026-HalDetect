@@ -7,6 +7,11 @@ CLAUDE.md
 PROGRESS.md
 LEARNING_ROADMAP.md
 
+# Local-only root files — remote branch carries only Development/ and README.md
+requirements-local.txt
+requirements-kaggle.txt
+samples/
+
 # Downloaded result archives (extract into Development/.../results/ instead)
 *.zip
 

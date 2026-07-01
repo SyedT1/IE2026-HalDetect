@@ -1,8 +1,0 @@
-# CPU-only local env: open/edit notebooks, run the ensemble combiner,
-# explore the dataset, score predictions. NO GPU inference here.
-# Setup: python -m venv .venv ; .venv\Scripts\pip install -r requirements-local.txt
-jupyterlab
-pandas
-datasets>=2.18
-huggingface_hub
-pillow
