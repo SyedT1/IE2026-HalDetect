@@ -1,3 +1,12 @@
 .venv/
 __pycache__/
 *.pyc
+
+# Local-only working notes (kept out of remote by request)
+CLAUDE.md
+PROGRESS.md
+LEARNING_ROADMAP.md
+
+# Downloaded result archives (extract into Development/.../results/ instead)
+*.zip
+
