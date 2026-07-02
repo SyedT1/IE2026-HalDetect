@@ -121,7 +121,7 @@ cfg = DPOConfig(
     num_train_epochs=1,
     learning_rate=5e-6,
     beta=0.1,
-    fp16=True,
+    bf16=True, fp16=False,     # grads are bf16 -> use bf16 (no GradScaler); fp16=True crashes on unscale
     gradient_checkpointing=True,
     gradient_checkpointing_kwargs={'use_reentrant': False},
     logging_steps=10,
