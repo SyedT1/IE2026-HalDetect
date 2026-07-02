@@ -152,7 +152,7 @@ cancels this bias and closes the dev/devtest gap.
 
 Each statement is judged independently with a simple zero-shot prompt and greedy decoding.
 
-$$\hat{y}_i = \underset{j \in \{1,2,3\}}{\arg\max} \ P_\theta\!\left(\texttt{"True"} \mid \mathcal{I}_i,\ s_i^{(j)}\right)$$
+$$\hat{y}_i = \arg\max_{j \in \{1,2,3\}} P_\theta(\text{"True"} \mid \mathcal{I}_i, s_i^{(j)})$$
 
 500 items × 3 statements = **1,500 forward passes**.
 
@@ -173,10 +173,9 @@ False. Answer with only one word: True or False.
 
 **Model:** `Qwen2.5-VL-3B-Instruct`, joint 3-statement prompt, reason→answer
 
-$$\hat{y}_i = \underset{j \in \{1,2,3\}}{\arg\max} \
-    P_{\theta_{3B}}\!\left(j \mid \mathcal{I}_i,\ s_i^{(1)}, s_i^{(2)}, s_i^{(3)},\ \text{``exactly one is True''}\right)$$
+$$\hat{y}_i = \arg\max_{j \in \{1,2,3\}} P_{\theta_{3B}}(j \mid \mathcal{I}_i, s_i^{(1)}, s_i^{(2)}, s_i^{(3)}, \text{"exactly one is True"})$$
 
-$$\text{output}_i = \langle\, r_i,\ \texttt{Answer: }\hat{y}_i \,\rangle$$
+$$\text{output}_i = (r_i, \text{"Answer: "}\hat{y}_i)$$
 
 500 items × 1 joint prompt = **500 forward passes**.
 
@@ -186,10 +185,9 @@ $$\text{output}_i = \langle\, r_i,\ \texttt{Answer: }\hat{y}_i \,\rangle$$
 
 **Model:** `Qwen2.5-VL-7B-Instruct`, 4-bit NF4, `MAX_PIXELS=1024×28×28`, `max_new_tokens=256`
 
-$$\hat{y}_i = \underset{j \in \{1,2,3\}}{\arg\max} \
-    P_\theta\!\left(j \mid \mathcal{I}_i,\ s_i^{(1)}, s_i^{(2)}, s_i^{(3)},\ \text{``exactly one is True''}\right)$$
+$$\hat{y}_i = \arg\max_{j \in \{1,2,3\}} P_\theta(j \mid \mathcal{I}_i, s_i^{(1)}, s_i^{(2)}, s_i^{(3)}, \text{"exactly one is True"})$$
 
-$$\text{output}_i = \langle\, r_i,\ \texttt{Answer: }\hat{y}_i \,\rangle$$
+$$\text{output}_i = (r_i, \text{"Answer: "}\hat{y}_i)$$
 
 ```
 You are a visual fact-checker examining an image from the Arab world.
@@ -211,10 +209,9 @@ Instructions:
 
 **Model:** `Qwen2.5-VL-3B-Instruct`, joint 3-statement prompt, answer→reason
 
-$$\hat{y}_i = \underset{j \in \{1,2,3\}}{\arg\max} \
-    P_{\theta_{3B}}\!\left(j \mid \mathcal{I}_i,\ s_i^{(1)}, s_i^{(2)}, s_i^{(3)}\right), \qquad
-\text{output}_i = \langle\, \texttt{Answer: }\hat{y}_i,\ r_i \,\rangle
-\quad \text{(answer → reason)}$$
+$$\hat{y}_i = \arg\max_{j \in \{1,2,3\}} P_{\theta_{3B}}(j \mid \mathcal{I}_i, s_i^{(1)}, s_i^{(2)}, s_i^{(3)})$$
+
+$$\text{output}_i = (\text{"Answer: "}\hat{y}_i,\ r_i) \quad \text{(answer → reason)}$$
 
 500 items × 1 joint prompt = **500 forward passes** (~20 min on T4).
 
@@ -224,8 +221,9 @@ $$\hat{y}_i = \underset{j \in \{1,2,3\}}{\arg\max} \
 
 **Model:** `Qwen2.5-VL-7B-Instruct`, 4-bit NF4, `MAX_PIXELS=1024×28×28`, `max_new_tokens=256`
 
-$$\text{output}_i = \langle\, \texttt{Answer: }\hat{y}_i,\ r_i \,\rangle
-\quad \text{(answer → reason)}$$
+$$\hat{y}_i = \arg\max_{j \in \{1,2,3\}} P_\theta(j \mid \mathcal{I}_i, s_i^{(1)}, s_i^{(2)}, s_i^{(3)})$$
+
+$$\text{output}_i = (\text{"Answer: "}\hat{y}_i,\ r_i) \quad \text{(answer → reason)}$$
 
 **Why this works:** the M²CQA paper (arXiv:2602.05437, QCRI/HBKU) found that
 reason-first prompting consistently increases counterfactual hallucination acceptance
@@ -252,9 +250,9 @@ All use `Qwen2.5-VL-7B-Instruct`, 4-bit NF4, `MAX_PIXELS=1024×28×28`, `max_new
 Every CoT variant is Run 4's decision rule conditioned on an additional reasoning-scaffold
 instruction $c^{(k)}$ appended to the base prompt, where $k$ indexes the CoT variant:
 
-$$\hat{y}_i^{(k)} = \underset{j \in \{1,2,3\}}{\arg\max} \
-    P_\theta\!\left(j \mid \mathcal{I}_i,\ s_i^{(1)}, s_i^{(2)}, s_i^{(3)},\ c^{(k)}\right),
-\qquad \text{output}_i = \langle\, \texttt{Answer: }\hat{y}_i^{(k)},\ r_i^{(k)} \,\rangle$$
+$$\hat{y}_i^{(k)} = \arg\max_{j \in \{1,2,3\}} P_\theta(j \mid \mathcal{I}_i, s_i^{(1)}, s_i^{(2)}, s_i^{(3)}, c^{(k)})$$
+
+$$\text{output}_i = (\text{"Answer: "}\hat{y}_i^{(k)},\ r_i^{(k)})$$
 
 Only $c^{(k)}$ (the scaffold text) changes across CoT1–CoT6; the base image/statement
 conditioning, model weights $\theta$, and answer-first output order are held fixed, so any
@@ -281,7 +279,7 @@ $$c^{(\text{CoT4})} = \text{"steelman each rejected statement, then rebut with v
 
 **CoT3 — Confidence-Ranked (CI 0.046)**
 
-$$c^{(\text{CoT3})} = \text{"rank } s_i^{(1)}, s_i^{(2)}, s_i^{(3)} \text{ by visual-evidence strength"}$$
+$$c^{(\text{CoT3})} = \text{"rank the three statements by visual-evidence strength, most to least"}$$
 
 ```
 - Then rank ALL THREE statements:
@@ -292,7 +290,7 @@ $$c^{(\text{CoT3})} = \text{"rank } s_i^{(1)}, s_i^{(2)}, s_i^{(3)} \text{ by vi
 
 **CoT6 — Socratic (CI 0.046)**
 
-$$c^{(\text{CoT6})} = \langle q_1, q_2, q_3, q_4 \rangle \text{ — a fixed sub-question sequence}$$
+$$c^{(\text{CoT6})} = (q_1, q_2, q_3, q_4) \quad \text{a fixed sub-question sequence}$$
 
 ```
 - Then answer: Q1: Most distinctive visual feature?
@@ -303,7 +301,7 @@ $$c^{(\text{CoT6})} = \langle q_1, q_2, q_3, q_4 \rangle \text{ — a fixed sub-
 
 **CoT1 — Evidence-First (CI 0.044)**
 
-$$c^{(\text{CoT1})} = \text{"describe } \mathcal{I}_i \text{ in one neutral sentence before reasoning, without reusing } s_i^{(j)} \text{ vocabulary"}$$
+$$c^{(\text{CoT1})} = \text{"describe the image in one neutral sentence before reasoning, without reusing statement vocabulary"}$$
 
 ```
 - On the second line write ONE sentence describing only what you literally
@@ -313,7 +311,7 @@ $$c^{(\text{CoT1})} = \text{"describe } \mathcal{I}_i \text{ in one neutral sent
 
 **CoT5 — Attribute Checklist (CI 0.042, best zero-shot single-pass)**
 
-$$c^{(\text{CoT5})} = \bigcup_{j=1}^{3} \left\{ a_{\text{colour/texture}}^{(j)},\ a_{\text{shape/form}}^{(j)},\ a_{\text{context}}^{(j)} \right\}$$
+$$c^{(\text{CoT5})} = \{a_{\text{colour/texture}}^{(j)},\ a_{\text{shape/form}}^{(j)},\ a_{\text{context}}^{(j)} : j = 1,2,3\}$$
 
 i.e. a per-statement, per-attribute evidence vector evaluated before the conclusion:
 
@@ -334,10 +332,9 @@ i.e. a per-statement, per-attribute evidence vector evaluated before the conclus
 Identical decision rule to Run 4; only the image tokenization resolution $P_{\max}$ changes,
 which alters the number of visual tokens $N_v(\mathcal{I}_i)$ fed to the model:
 
-$$N_v(\mathcal{I}_i) = \left\lceil \frac{\min(\text{pixels}(\mathcal{I}_i),\, P_{\max})}{28 \times 28} \right\rceil,
-\qquad
-\hat{y}_i = \underset{j \in \{1,2,3\}}{\arg\max} \
-    P_\theta\!\left(j \mid \mathcal{I}_i^{[N_v]},\ s_i^{(1)}, s_i^{(2)}, s_i^{(3)}\right)$$
+$$N_v(\mathcal{I}_i) = \lceil \min(\text{pixels}(\mathcal{I}_i), P_{\max}) / (28 \times 28) \rceil$$
+
+$$\hat{y}_i = \arg\max_{j \in \{1,2,3\}} P_\theta(j \mid \mathcal{I}_i^{[N_v]}, s_i^{(1)}, s_i^{(2)}, s_i^{(3)})$$
 
 where $\mathcal{I}_i^{[N_v]}$ denotes the image patch-tokenized at $N_v$ tokens under
 $P_{\max}=1280\times28\times28$ (vs. $1024\times28\times28$ for Run 4). Increasing $P_{\max}$
@@ -363,18 +360,15 @@ position 3: 90.0%).
 | E | [3, 1, 2] | Run 5b |
 
 Each permutation $\pi \in \{A, D, E\}$ reorders the statements before applying Run 4's
-decision rule, then predictions are combined by majority vote over the *original* label
+decision rule, then predictions are combined by majority vote over the original label
 space (each $\hat{y}_i^{(\pi)}$ is mapped back to its statement identity before voting):
 
-$$\hat{y}_i^{(\pi)} = \underset{j \in \{1,2,3\}}{\arg\max} \
-    P_\theta\!\left(j \mid \mathcal{I}_i,\ s_i^{(\pi(1))}, s_i^{(\pi(2))}, s_i^{(\pi(3))}\right)$$
+$$\hat{y}_i^{(\pi)} = \arg\max_{j \in \{1,2,3\}} P_\theta(j \mid \mathcal{I}_i, s_i^{(\pi(1))}, s_i^{(\pi(2))}, s_i^{(\pi(3))})$$
 
-$$\hat{y}_i^{\text{ADE}} = \underset{j \in \{1,2,3\}}{\arg\max} \
-    \sum_{\pi \in \{A,D,E\}} \mathbb{1}\!\left[\hat{y}_i^{(\pi)} = j\right],
-\qquad \text{ties} \rightarrow \hat{y}_i^{(A)}$$
+$$\hat{y}_i^{\text{ADE}} = \arg\max_{j \in \{1,2,3\}} \sum_{\pi \in \{A,D,E\}} \mathbb{1}[\hat{y}_i^{(\pi)} = j]$$
 
-Majority vote (2-of-3 wins; 3-way tie → Run 4). CI drops from 0.050 to **0.042**,
-closing the dev/devtest gap entirely.
+ties → $\hat{y}_i^{(A)}$. Majority vote (2-of-3 wins; 3-way tie → Run 4). CI drops from
+0.050 to **0.042**, closing the dev/devtest gap entirely.
 
 **Speed:** 3 × 500 passes ≈ 15 hours total on T4 (5a and 5b run in parallel).
 
@@ -398,27 +392,25 @@ total, 0.24%). This design:
 For a frozen 4-bit weight $W_0 \in \mathbb{R}^{d \times k}$ in an LLM attention/MLP
 layer, LoRA adds a low-rank update $\Delta W = BA$ with rank $r=8$:
 
-$$W = W_0 + \Delta W = W_0 + BA, \qquad B \in \mathbb{R}^{d \times r},\ A \in \mathbb{R}^{r \times k},\ r \ll \min(d,k)$$
+$$W = W_0 + \Delta W = W_0 + BA, \qquad B \in \mathbb{R}^{d \times r}, A \in \mathbb{R}^{r \times k}, r \ll \min(d,k)$$
 
 $$h = W_0 x + \frac{\alpha}{r} BAx$$
 
 where $x$ is the layer input, $\alpha$ is the LoRA scaling factor, and only $A, B$
-(and the frozen ViT is entirely excluded) receive gradients. Training minimizes the
+(the frozen ViT is entirely excluded) receive gradients. Training minimizes the
 next-token cross-entropy loss over the answer-first target sequence
-$y_i = \langle \texttt{Answer: }\hat{y}_i,\ r_i \rangle$ of length $T_i$, restricted to
-the LoRA parameters $\Phi = \{A_\ell, B_\ell\}_{\ell \in \text{LLM layers}}$:
+$y_i = (\text{"Answer: "}\hat{y}_i,\ r_i)$ of length $T_i$, restricted to
+the LoRA parameters $\Phi = \{A_\ell, B_\ell\}$ across LLM layers $\ell$:
 
-$$\mathcal{L}(\Phi) = -\frac{1}{N}\sum_{i=1}^{N} \frac{1}{T_i}\sum_{t=1}^{T_i}
-    \log P_{\theta_0, \Phi}\!\left(y_{i,t} \mid \mathcal{I}_i,\ s_i^{(1:3)},\ y_{i,<t}\right)$$
+$$\mathcal{L}(\Phi) = -\frac{1}{N}\sum_{i=1}^{N} \frac{1}{T_i}\sum_{t=1}^{T_i} \log P_{\theta_0, \Phi}(y_{i,t} \mid \mathcal{I}_i, s_i^{(1:3)}, y_{i,<t})$$
 
-$$\Phi^{*} = \underset{\Phi}{\arg\min}\ \mathcal{L}(\Phi), \qquad \theta_0 \text{ (base + ViT) frozen}$$
+$$\Phi^{*} = \arg\min_{\Phi} \mathcal{L}(\Phi), \qquad \theta_0 \ \text{(base + ViT) frozen}$$
 
 **Training dynamics:** loss decreased from 0.396 → 0.041 over 320 logged steps,
 indicating strong convergence on the 2,000-item subset. Inference then applies the
 CoT5 decision rule with the fine-tuned parameters:
 
-$$\hat{y}_i = \underset{j \in \{1,2,3\}}{\arg\max} \
-    P_{\theta_0, \Phi^{*}}\!\left(j \mid \mathcal{I}_i,\ s_i^{(1)}, s_i^{(2)}, s_i^{(3)},\ c^{(\text{CoT5})}\right)$$
+$$\hat{y}_i = \arg\max_{j \in \{1,2,3\}} P_{\theta_0, \Phi^{*}}(j \mid \mathcal{I}_i, s_i^{(1)}, s_i^{(2)}, s_i^{(3)}, c^{(\text{CoT5})})$$
 
 **Result:** CI **0.032**, Combined Acc **0.968**, CFHR **0.000**, Q+ **0.968**, Q− **0.984**.
 This is a 23.8% further reduction below the best zero-shot system (CoT5/ADE, CI=0.042),
@@ -440,16 +432,17 @@ Identical objective and adapter structure to RunFT, with the frozen base swapped
 $\theta_0^{7B}$ to $\theta_0^{3B}$ (LoRA rank $r=8$, same $A,B$ shapes relative to the
 smaller layer widths):
 
-$$\Phi_{3B}^{*} = \underset{\Phi}{\arg\min}\ \mathcal{L}(\Phi; \theta_0^{3B}),
-\qquad
-\hat{y}_i = \underset{j \in \{1,2,3\}}{\arg\max} \
-    P_{\theta_0^{3B}, \Phi_{3B}^{*}}\!\left(j \mid \mathcal{I}_i,\ s_i^{(1)}, s_i^{(2)}, s_i^{(3)},\ c^{(\text{CoT5})}\right)$$
+$$\Phi_{3B}^{*} = \arg\min_{\Phi} \mathcal{L}(\Phi; \theta_0^{3B})$$
 
-where $\mathcal{L}(\cdot\,;\theta_0^{3B})$ is the same cross-entropy loss defined above,
+$$\hat{y}_i = \arg\max_{j \in \{1,2,3\}} P_{\theta_0^{3B}, \Phi_{3B}^{*}}(j \mid \mathcal{I}_i, s_i^{(1)}, s_i^{(2)}, s_i^{(3)}, c^{(\text{CoT5})})$$
+
+where $\mathcal{L}(\cdot; \theta_0^{3B})$ is the same cross-entropy loss defined above,
 evaluated with the 3B backbone frozen in place of the 7B one. The resulting CI gap
-$\text{CI}(\text{RunFT-3B}) - \text{CI}(\text{RunFT}) = 0.050 - 0.032 = 0.018$ is
-attributable entirely to $\theta_0^{3B}$ vs. $\theta_0^{7B}$ base capacity, since
-$\mathcal{L}$, $\Phi$'s rank, training data, and $c^{(\text{CoT5})}$ are held fixed.
+
+$$\text{CI(RunFT-3B)} - \text{CI(RunFT)} = 0.050 - 0.032 = 0.018$$
+
+is attributable entirely to $\theta_0^{3B}$ vs. $\theta_0^{7B}$ base capacity, since
+$\mathcal{L}$, the LoRA rank, the training data, and $c^{(\text{CoT5})}$ are held fixed.
 
 **Result:** CI **0.050**, Combined Acc **0.950**, CFHR **0.000**, Q+ **0.950**, Q− **0.975**.
 Training wall-clock/duration not recorded for this run.
