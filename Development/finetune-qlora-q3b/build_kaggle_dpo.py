@@ -128,9 +128,8 @@ cfg = DPOConfig(
     save_strategy='steps', save_steps=200, save_total_limit=2,
     optim='paged_adamw_8bit',
     remove_unused_columns=False,
-    max_length=1024, max_prompt_length=768,
     report_to='none',
-)
+)   # length args (max_length/max_prompt_length) omitted — TRL version rejects them; defaults used
 trainer = DPOTrainer(
     model=model, ref_model=None,        # ref = SFT policy with adapter disabled
     args=cfg, train_dataset=dpo_ds,
