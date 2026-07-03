@@ -47,8 +47,10 @@ except Exception as e:
 
 REPO_ID   = 'QCRI/AynVQA-ArabicNLP26'
 VLM_MODEL = 'Qwen/Qwen2.5-VL-3B-Instruct'
-MAX_PIXELS = 512 * 28 * 28     # smaller for DPO (two forward passes per step)
-N_DPO     = 800                # subset of train for DPO pairs (keep it light)
+MAX_PIXELS = 384 * 28 * 28     # smaller for DPO (two forward passes per step)
+SMOKE     = False              # smoke test passed -> full run. Set True again for a quick re-test.
+N_DPO     = 200 if SMOKE else 600   # subset of train for DPO pairs (600 = good DPO amount)
+FULL_STEPS = 150               # full run: 150 steps x4 = 600 pairs = 1 full epoch (~4 hr)
 
 # find the SFT adapter folder (has adapter_config.json) under /kaggle/input
 SFT_ADAPTER = None
@@ -111,7 +113,12 @@ base = Qwen2_5_VLForConditionalGeneration.from_pretrained(
 model = PeftModel.from_pretrained(base, SFT_ADAPTER, is_trainable=True)
 model.print_trainable_parameters()""")
 
-md("""## 5. DPO train (EXPERIMENTAL — most likely to need tweaks)""")
+md("""## 5. DPO train (EXPERIMENTAL — most likely to need tweaks)
+
+⚠️ **Run this notebook INTERACTIVE, not Save & Run All**, so you see the live tqdm
+bar + GPU% (right sidebar). Committed runs hide the progress bar → you fly blind.
+`SMOKE=True` (cell 2) caps this at `max_steps=20` (~few min) to prove it moves before
+you commit a full run. When the smoke test logs losses + saves, set `SMOKE=False`.""")
 code("""from trl import DPOConfig, DPOTrainer
 
 cfg = DPOConfig(
@@ -119,24 +126,34 @@ cfg = DPOConfig(
     per_device_train_batch_size=1,
     gradient_accumulation_steps=4,
     num_train_epochs=1,
+    max_steps=20 if SMOKE else FULL_STEPS,   # smoke: 20 to confirm it moves; full: FULL_STEPS (~1.5 hr)
     learning_rate=5e-6,
     beta=0.1,
     bf16=True, fp16=False,     # grads are bf16 -> use bf16 (no GradScaler); fp16=True crashes on unscale
     gradient_checkpointing=True,
     gradient_checkpointing_kwargs={'use_reentrant': False},
-    logging_steps=10,
-    save_strategy='steps', save_steps=200, save_total_limit=2,
+    logging_steps=1,           # loss line EVERY step -> live signal even in committed log
+    save_strategy='steps', save_steps=25, save_total_limit=2,  # mid-run saves -> survive disconnect
     optim='paged_adamw_8bit',
     remove_unused_columns=False,
+    precompute_ref_log_probs=False,  # no silent full-dataset ref pass before step 1
+    dataset_num_proc=2,        # parallelize the (slow, multimodal) tokenization map
     report_to='none',
 )   # length args (max_length/max_prompt_length) omitted — TRL version rejects them; defaults used
+print('>>> building DPOTrainer (tokenizes dataset — may take a minute on images)...', flush=True)
 trainer = DPOTrainer(
     model=model, ref_model=None,        # ref = SFT policy with adapter disabled
     args=cfg, train_dataset=dpo_ds,
     processing_class=processor,
 )
-trainer.train()
-print('DPO finished.')""")
+print('>>> trainer built. starting trainer.train() now.', flush=True)
+# auto-resume: if a checkpoint survived in output dir, continue from it instead of step 0
+import glob as _g, os as _o
+_cks = _g.glob('/kaggle/working/dpo_ckpts/checkpoint-*')
+_resume = max(_cks, key=lambda p: int(p.split('-')[-1])) if _cks else None
+print('>>> resume_from_checkpoint =', _resume, flush=True)
+trainer.train(resume_from_checkpoint=_resume)
+print('DPO finished.  SMOKE =', SMOKE, '(set False in cell 2 for the full run)')""")
 
 md("## 6. Save DPO adapter + zip")
 code("""import glob, zipfile, os

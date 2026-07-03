@@ -23,7 +23,18 @@ Small, version-controlled artifacts for the paper narrative. Large binaries
 | `T1bfull_sft_adapter.zip` | trained LoRA adapter (full 3 epochs), reusable |
 
 **Progress:** baseline 0.096 → SFT partial (1.6ep) 0.062 → **SFT full (3ep) 0.058**
-(−40% rel error). Nearing the 7B CoT5 result (0.042) with a 3B model. Next: DPO.
+(−40% rel error). Nearing the 7B CoT5 result (0.042) with a 3B model.
+
+## T2 — DPO on top of SFT (flat)
+
+| Artifact | Note |
+|---|---|
+| `T2_dpo_infer_results.json` | CI **0.058** (= SFT), acc 0.942 |
+| `T2_dpo_dev_preds.csv` | 500-dev preds — **0/500 changed** vs SFT (identical) |
+| `T2_dpo_adapter.zip` | DPO LoRA adapter (600 pairs, 150 steps, lr 5e-6, beta 0.1) |
+
+**Finding:** DPO gave **no gain** — SFT already saturated the contrastive signal; gentle
+DPO didn't flip any greedy argmax. Valid negative ablation for the paper.
 
 ---
 

@@ -1,0 +1,9 @@
+{
+  "adapter": "/kaggle/input/datasets/sakhawatdhrubo/dpo-adapter-q3b",
+  "ci": 0.058,
+  "acc": 0.942,
+  "baseline_ci": 0.096,
+  "delta_ci": -0.038,
+  "n_dev": 500,
+  "max_pixels": 602112
+}
