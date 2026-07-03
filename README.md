@@ -25,6 +25,7 @@ and which two are **False** (hallucinated). Exactly one statement per image is c
 | CoT3 | Run 4 + confidence-ranked CoT | 0.046 | 0.954 | 0.000 | 0.954 | 0.977 |
 | CoT6 | Run 4 + Socratic CoT | 0.046 | 0.954 | 0.000 | 0.954 | 0.977 |
 | CoT1 | Run 4 + evidence-first CoT | 0.044 | 0.956 | 0.000 | 0.956 | 0.978 |
+| RunFT-3B (3k) | QLoRA fine-tuned Qwen2.5-VL-3B (3,000 items) + CoT5 prompt | 0.044 | 0.956 | 0.000 | 0.956 | 0.978 |
 | CoT5 | Run 4 + attribute checklist CoT | 0.042 | 0.958 | 0.000 | 0.958 | 0.979 |
 | Run ADE | Run 4 + Latin square permutation ensemble (A+D+E) | 0.042 | 0.958 | 0.000 | 0.958 | 0.979 |
 | **RunFT (best)** | **QLoRA fine-tuned Qwen2.5-VL-7B + CoT5 prompt** | **0.032** | **0.968** | **0.000** | **0.968** | **0.984** |
@@ -46,6 +47,15 @@ and which two are **False** (hallucinated). Exactly one statement per image is c
 > adaptation only buys back what the extra ~4B parameters of the 7B model already
 > provided zero-shot — it does not reach the ceiling that fine-tuning unlocks at 7B.
 
+> **Key finding (RunFT-3B (3k)):** retraining the identical 3B QLoRA recipe on the full
+> 3,000-item train set (instead of the 2,000-item subsample) drops CI from 0.050 to
+> **0.044** — a 12.0% relative reduction from training data alone, with model, LoRA rank,
+> and inference prompt held fixed. This ties CoT1 (evidence-first zero-shot CoT) and
+> surpasses CoT4, CoT3, and CoT6, though it still falls short of the best zero-shot
+> ceiling (CoT5/ADE, 0.042) and the 7B fine-tune (RunFT, 0.032). Training-set size is a
+> meaningful lever at 3B scale, but — like prompting — it cannot fully substitute for the
+> base model capacity that the 7B backbone provides.
+
 The gains decompose cleanly across orthogonal factors:
 
 | Factor | Runs compared | CI reduction |
@@ -61,6 +71,7 @@ The gains decompose cleanly across orthogonal factors:
 | Attribute checklist CoT | Run 4 → CoT5 | −16.0% |
 | Permutation ensemble A+D+E | Run 4 → Run ADE | −16.0% |
 | QLoRA fine-tuning at 3B scale (frozen vision encoder) | Run 5 (3B, ans-first) → RunFT-3B | −39.0% |
+| Training-set size 2,000 → 3,000 items (3B QLoRA, same recipe) | RunFT-3B → RunFT-3B (3k) | −12.0% |
 | **QLoRA fine-tuning at 7B scale (frozen vision encoder)** | **CoT5 → RunFT** | **−23.8%** |
 
 > **Key finding (Run 5):** answer-first prompting on the 3B model (CI 0.082) outperforms
@@ -83,14 +94,17 @@ The following methods were evaluated and did not improve over Run 4 (CI 0.050):
 | Caption-then-verify cascade | 0.084 | Caption stage loses fine-grained visual detail needed for texture/intent errors |
 | CoT2 — elimination | 0.056 | Falsification framing hurts; model rebuttals anchor to distractor vocabulary |
 | Res1280 — higher resolution | 0.054 | MAX_PIXELS=1280×28×28 hurts vs 1024×28×28; extra visual tokens diffuse attention |
-| RunFT-3B — QLoRA fine-tuning at 3B scale | 0.050 | Ties Run 4 zero-shot but does not beat best zero-shot (CoT5, 0.042) or 7B fine-tune (RunFT, 0.032); model capacity, not adaptation, is the binding constraint at 3B |
+| RunFT-3B — QLoRA fine-tuning at 3B scale, 2,000 items | 0.050 | Ties Run 4 zero-shot but does not beat best zero-shot (CoT5, 0.042) or 7B fine-tune (RunFT, 0.032); model capacity, not adaptation, is the binding constraint at 3B |
 | Cultural grounding hint (Run A6) | — | Devtest submission zeroed due to wrong split; dev results inconclusive |
 
 These results establish that CI=0.042 is the ceiling for **training-free** methods at 7B
 scale under zero-shot inference. Fine-tuning (RunFT, CI=0.032) breaks through this ceiling,
 confirming the remaining zero-shot failures were learnable rather than irreducible — but
-only when paired with sufficient base model capacity (RunFT-3B shows the same fine-tuning
-recipe at 3B scale is insufficient to reach that ceiling).
+only when paired with sufficient base model capacity. RunFT-3B (2,000 items, CI 0.050)
+shows the same fine-tuning recipe at 3B scale is insufficient to reach that ceiling; more
+training data helps (RunFT-3B (3k), 3,000 items, CI 0.044) but still doesn't close the
+gap to either the 7B zero-shot ceiling (0.042) or the 7B fine-tune (0.032) — the 3B-vs-7B
+capacity gap, not data volume, remains the binding constraint.
 
 ---
 
@@ -458,22 +472,57 @@ not sufficient to match what 7B achieves either zero-shot or fine-tuned.
 
 ---
 
+### RunFT-3B (3k) — QLoRA Fine-tuned Qwen2.5-VL-3B, Full Train Set
+
+**Base model:** `Qwen2.5-VL-3B-Instruct`, 4-bit NF4 QLoRA
+**Training data:** all 3,000 items in `train_en.jsonl` (vs. the 2,000-item subsample used
+for RunFT-3B above)
+**Training:** frozen vision encoder, LoRA rank 8 on LLM layers only (identical recipe to
+RunFT-3B; training duration not recorded)
+**Inference prompt:** CoT5 attribute checklist, answer-first
+**Inference notebook:** `finetune/step-3-qlora-q3b-3k-inference.ipynb`
+(`RUN_ID = runFT_qlora_3b`, `MAX_PIXELS=1024×28×28`, `MAX_NEW_TOKENS=256`)
+
+This isolates the effect of training-set size at fixed model scale and fixed LoRA recipe:
+only the number of labelled fine-tuning examples changes relative to RunFT-3B.
+
+$$\Phi_{3B,3k}^{*} = \arg\min_{\Phi} \mathcal{L}(\Phi; \theta_0^{3B}) \ \text{over all } N=3000 \text{ training items}$$
+
+Inference on `devtest` resolved all 500 items on the primary answer-first pass with
+**zero fallback triggers** (0.0%), and predictions were submitted to
+[Codabench 17051](https://www.codabench.org/competitions/17051).
+
+**Result:** CI **0.044**, Combined Acc **0.956**, CFHR **0.000**, Q+ **0.956**, Q− **0.978**.
+Training/inference duration not recorded for this run.
+
+$$\text{CI(RunFT-3B)} - \text{CI(RunFT-3B (3k))} = 0.050 - 0.044 = 0.006 \quad (-12.0\% \text{ relative})$$
+
+**Takeaway:** the extra 1,000 training items buy a real, if partial, improvement — CI
+drops from 0.050 to 0.044, matching CoT1's zero-shot evidence-first CoT and beating
+CoT4, CoT3, and CoT6. But it still does not reach the best zero-shot ceiling (CoT5/ADE,
+0.042) or the 7B fine-tune (RunFT, 0.032). Combined with the earlier RunFT-3B result,
+this suggests base model capacity (3B vs. 7B) remains the dominant constraint at this
+task: more training data helps at the margin, but scaling the backbone helps more.
+
+---
+
 ## System Comparison
 
-| | R1 | R3 | R2 | R5 | CoT2 | Res1280 | R4 | **FT-3B** | CoT4 | CoT3 | CoT6 | CoT1 | CoT5 | ADE | **FT** |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| Model | 3B | 3B | 7B | 3B | 7B | 7B | 7B | **3B+LoRA** | 7B | 7B | 7B | 7B | 7B | 7B×3 | **7B+LoRA** |
-| Passes | 3 | 1 | 1 | 1 | 1 | 1 | 1 | **1** | 1 | 1 | 1 | 1 | 1 | 3 | **1** |
-| Joint | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | **✅** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | **✅** |
-| Ans first | — | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | **✅** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | **✅** |
-| CoT style | — | free | free | free | elim | free | free | **attr** | devil | rank | socratic | evid | attr | free | **attr** |
-| Fine-tuned | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | **✅** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | **✅** |
-| Ensemble | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
-| CI ↓ | 0.257 | 0.142 | 0.092 | 0.082 | 0.056 | 0.054 | 0.050 | **0.050** | 0.048 | 0.046 | 0.046 | 0.044 | 0.042 | 0.042 | **0.032** |
-| Comb ↑ | 0.740 | 0.858 | 0.908 | 0.918 | 0.944 | 0.946 | 0.950 | **0.950** | 0.952 | 0.954 | 0.954 | 0.956 | 0.958 | 0.958 | **0.968** |
-| CFHR ↓ | — | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | **0.000** | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | **0.000** |
-| Q+ ↑ | 0.912 | 0.858 | 0.908 | 0.918 | 0.944 | 0.946 | 0.950 | **0.950** | 0.952 | 0.954 | 0.954 | 0.956 | 0.958 | 0.958 | **0.968** |
-| Q− ↑ | 0.888 | 0.929 | 0.954 | 0.959 | 0.972 | 0.973 | 0.975 | **0.975** | 0.976 | 0.977 | 0.977 | 0.978 | 0.979 | 0.979 | **0.984** |
+| | R1 | R3 | R2 | R5 | CoT2 | Res1280 | R4 | **FT-3B** | CoT4 | CoT3 | CoT6 | CoT1 | **FT-3B (3k)** | CoT5 | ADE | **FT** |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| Model | 3B | 3B | 7B | 3B | 7B | 7B | 7B | **3B+LoRA** | 7B | 7B | 7B | 7B | **3B+LoRA** | 7B | 7B×3 | **7B+LoRA** |
+| Passes | 3 | 1 | 1 | 1 | 1 | 1 | 1 | **1** | 1 | 1 | 1 | 1 | **1** | 1 | 3 | **1** |
+| Joint | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | **✅** | ✅ | ✅ | ✅ | ✅ | **✅** | ✅ | ✅ | **✅** |
+| Ans first | — | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | **✅** | ✅ | ✅ | ✅ | ✅ | **✅** | ✅ | ✅ | **✅** |
+| CoT style | — | free | free | free | elim | free | free | **attr** | devil | rank | socratic | evid | **attr** | attr | free | **attr** |
+| Train items | — | — | — | — | — | — | — | **2,000** | — | — | — | — | **3,000** | — | — | **2,000** |
+| Fine-tuned | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | **✅** | ❌ | ❌ | ❌ | ❌ | **✅** | ❌ | ❌ | **✅** |
+| Ensemble | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
+| CI ↓ | 0.257 | 0.142 | 0.092 | 0.082 | 0.056 | 0.054 | 0.050 | **0.050** | 0.048 | 0.046 | 0.046 | 0.044 | **0.044** | 0.042 | 0.042 | **0.032** |
+| Comb ↑ | 0.740 | 0.858 | 0.908 | 0.918 | 0.944 | 0.946 | 0.950 | **0.950** | 0.952 | 0.954 | 0.954 | 0.956 | **0.956** | 0.958 | 0.958 | **0.968** |
+| CFHR ↓ | — | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | **0.000** | 0.000 | 0.000 | 0.000 | 0.000 | **0.000** | 0.000 | 0.000 | **0.000** |
+| Q+ ↑ | 0.912 | 0.858 | 0.908 | 0.918 | 0.944 | 0.946 | 0.950 | **0.950** | 0.952 | 0.954 | 0.954 | 0.956 | **0.956** | 0.958 | 0.958 | **0.968** |
+| Q− ↑ | 0.888 | 0.929 | 0.954 | 0.959 | 0.972 | 0.973 | 0.975 | **0.975** | 0.976 | 0.977 | 0.977 | 0.978 | **0.978** | 0.979 | 0.979 | **0.984** |
 
 ---
 
@@ -490,6 +539,9 @@ IE2026-HalDetect/
     ├── cot-variants/               # CoT1–CoT6: structured CoT ablations
     ├── ensemble-ADE/               # Run ADE: Latin square permutation ensemble + majority vote
     └── finetune/                   # RunFT / RunFT-3B: QLoRA training + inference notebooks
+        └── step-3-qlora-q3b-3k-inference.ipynb   # RunFT-3B (3k): 3B adapter trained on
+                                                    # the full 3,000-item train set,
+                                                    # devtest inference, CI 0.044
 ```
 
 Run 3 shares the notebook from `joint-3-q7b/` with `VLM_MODEL` switched to the 3B variant.
@@ -534,6 +586,7 @@ ds = load_dataset("QCRI/AynVQA-ArabicNLP26", "task1b_en", split="devtest")
 | RunFT infer | `finetune/qlora-infer-final.ipynb` | T4 | ~40 min |
 | RunFT-3B train | same as RunFT train, `VLM_MODEL = Qwen/Qwen2.5-VL-3B-Instruct` | T4×2 | not recorded |
 | RunFT-3B infer | same as RunFT infer, `VLM_MODEL = Qwen/Qwen2.5-VL-3B-Instruct` | T4 | not recorded |
+| RunFT-3B (3k) infer | `finetune/step-3-qlora-q3b-3k-inference.ipynb` — 3B adapter retrained on the full 3,000-item train set, `SPLIT='devtest'` | T4×2 | not recorded (CI 0.044 via Codabench) |
 
 1. Upload notebook to Kaggle → enable T4 GPU → add HF_TOKEN secret
 2. Set `SPLIT = 'dev'` to score locally; `SPLIT = 'devtest'` for Codabench submission
