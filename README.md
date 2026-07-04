@@ -20,41 +20,29 @@ and which two are **False** (hallucinated). Exactly one statement per image is c
 | CoT2 | Run 4 + elimination-based CoT | 0.056 | 0.944 | 0.000 | 0.944 | 0.972 |
 | Res1280 | Run 4 + MAX_PIXELS=1280×28×28 | 0.054 | 0.946 | 0.000 | 0.946 | 0.973 |
 | Run 4 | Qwen2.5-VL-7B, joint 3-statement prompt, answer→reason | 0.050 | 0.950 | 0.000 | 0.950 | 0.975 |
-| RunFT-3B | QLoRA fine-tuned Qwen2.5-VL-3B + CoT5 prompt, 2,000 items | 0.050 | 0.950 | 0.000 | 0.950 | 0.975 |
 | CoT4 | Run 4 + devil's advocate CoT | 0.048 | 0.952 | 0.000 | 0.952 | 0.976 |
 | CoT3 | Run 4 + confidence-ranked CoT | 0.046 | 0.954 | 0.000 | 0.954 | 0.977 |
 | CoT6 | Run 4 + Socratic CoT | 0.046 | 0.954 | 0.000 | 0.954 | 0.977 |
 | CoT1 | Run 4 + evidence-first CoT | 0.044 | 0.956 | 0.000 | 0.956 | 0.978 |
-| RunFT-3B (3k) | QLoRA fine-tuned Qwen2.5-VL-3B (3,000 items) + CoT5 prompt | 0.044 | 0.956 | 0.000 | 0.956 | 0.978 |
 | CoT5 | Run 4 + attribute checklist CoT | 0.042 | 0.958 | 0.000 | 0.958 | 0.979 |
 | Run ADE | Run 4 + Latin square permutation ensemble (A+D+E) | 0.042 | 0.958 | 0.000 | 0.958 | 0.979 |
-| **RunFT (best)** | **QLoRA fine-tuned Qwen2.5-VL-7B + CoT5 prompt** | **0.032** | **0.968** | **0.000** | **0.968** | **0.984** |
+| RunFT-3k | QLoRA Qwen2.5-VL-7B, 3000 images, ~600 steps | 0.036 | 0.964 | 0.000 | 0.964 | 0.982 |
+| **RunFT (best)** | **QLoRA Qwen2.5-VL-7B, 2000 images, 500 steps** | **0.032** | **0.968** | **0.000** | **0.968** | **0.984** |
 
 **RunFT reduces Contrastive Instability by 87.5% vs the baseline (0.257 → 0.032).**
 **RunFT reduces CI by a further 23.8% below the best zero-shot system (0.042 → 0.032).**
+
+> **Key finding (RunFT vs RunFT-3k):** training on 2,000 items for 500 steps (CI=0.032)
+> outperforms training on 3,000 items for ~600 steps (CI=0.036). The 3,000-item run
+> did not fully converge before the Kaggle 12h session limit cut it off at step ~600
+> (loss still at 0.22 vs ~0.04 for the 2,000-item run at step 500). The 2,000-item
+> run trained to completion within a single session and is the stronger system.
 
 > **Key finding (RunFT):** QLoRA fine-tuning on 2,000 training items for 500 optimizer
 > steps with frozen vision encoder achieves CI 0.032 — surpassing all zero-shot and
 > prompting-based systems by a clear margin. This confirms that the 21 failures of the
 > best zero-shot system (CoT5/ADE) were learnable from labelled examples and were not
-> irreducible at 7B scale — they required task-specific adaptation of the LLM layers.
-
-> **Key finding (RunFT-3B):** QLoRA fine-tuning the smaller Qwen2.5-VL-3B model on the
-> same 2,000-item subset lands at CI 0.050 — exactly matching zero-shot Run 4 (7B,
-> answer-first, no fine-tuning) and falling short of both the best zero-shot prompting
-> system (CoT5, CI 0.042) and the 7B fine-tuned system (RunFT, CI 0.032). Fine-tuning
-> narrows the gap created by smaller model scale but does not close it: at 3B, QLoRA
-> adaptation only buys back what the extra ~4B parameters of the 7B model already
-> provided zero-shot — it does not reach the ceiling that fine-tuning unlocks at 7B.
-
-> **Key finding (RunFT-3B (3k)):** retraining the identical 3B QLoRA recipe on the full
-> 3,000-item train set (instead of the 2,000-item subsample) drops CI from 0.050 to
-> **0.044** — a 12.0% relative reduction from training data alone, with model, LoRA rank,
-> and inference prompt held fixed. This ties CoT1 (evidence-first zero-shot CoT) and
-> surpasses CoT4, CoT3, and CoT6, though it still falls short of the best zero-shot
-> ceiling (CoT5/ADE, 0.042) and the 7B fine-tune (RunFT, 0.032). Training-set size is a
-> meaningful lever at 3B scale, but — like prompting — it cannot fully substitute for the
-> base model capacity that the 7B backbone provides.
+> irreducible at 7B scale.
 
 The gains decompose cleanly across orthogonal factors:
 
@@ -70,9 +58,7 @@ The gains decompose cleanly across orthogonal factors:
 | Evidence-first CoT | Run 4 → CoT1 | −12.0% |
 | Attribute checklist CoT | Run 4 → CoT5 | −16.0% |
 | Permutation ensemble A+D+E | Run 4 → Run ADE | −16.0% |
-| QLoRA fine-tuning at 3B scale (frozen vision encoder) | Run 5 (3B, ans-first) → RunFT-3B | −39.0% |
-| Training-set size 2,000 → 3,000 items (3B QLoRA, same recipe) | RunFT-3B → RunFT-3B (3k) | −12.0% |
-| **QLoRA fine-tuning at 7B scale (frozen vision encoder)** | **CoT5 → RunFT** | **−23.8%** |
+| **QLoRA fine-tuning, 2k items, 500 steps** | **CoT5 → RunFT** | **−23.8%** |
 
 > **Key finding (Run 5):** answer-first prompting on the 3B model (CI 0.082) outperforms
 > reason-first on the 7B model (CI 0.092), confirming that prompt order is a stronger
@@ -94,17 +80,8 @@ The following methods were evaluated and did not improve over Run 4 (CI 0.050):
 | Caption-then-verify cascade | 0.084 | Caption stage loses fine-grained visual detail needed for texture/intent errors |
 | CoT2 — elimination | 0.056 | Falsification framing hurts; model rebuttals anchor to distractor vocabulary |
 | Res1280 — higher resolution | 0.054 | MAX_PIXELS=1280×28×28 hurts vs 1024×28×28; extra visual tokens diffuse attention |
-| RunFT-3B — QLoRA fine-tuning at 3B scale, 2,000 items | 0.050 | Ties Run 4 zero-shot but does not beat best zero-shot (CoT5, 0.042) or 7B fine-tune (RunFT, 0.032); model capacity, not adaptation, is the binding constraint at 3B |
+| RunFT-3k — 3000 items, ~600 steps | 0.036 | Incomplete convergence due to 12h Kaggle session limit; 2000-item run converged fully |
 | Cultural grounding hint (Run A6) | — | Devtest submission zeroed due to wrong split; dev results inconclusive |
-
-These results establish that CI=0.042 is the ceiling for **training-free** methods at 7B
-scale under zero-shot inference. Fine-tuning (RunFT, CI=0.032) breaks through this ceiling,
-confirming the remaining zero-shot failures were learnable rather than irreducible — but
-only when paired with sufficient base model capacity. RunFT-3B (2,000 items, CI 0.050)
-shows the same fine-tuning recipe at 3B scale is insufficient to reach that ceiling; more
-training data helps (RunFT-3B (3k), 3,000 items, CI 0.044) but still doesn't close the
-gap to either the 7B zero-shot ceiling (0.042) or the 7B fine-tune (0.032) — the 3B-vs-7B
-capacity gap, not data volume, remains the binding constraint.
 
 ---
 
@@ -166,7 +143,7 @@ cancels this bias and closes the dev/devtest gap.
 
 Each statement is judged independently with a simple zero-shot prompt and greedy decoding.
 
-$$\hat{y}_i = \arg\max_{j \in \{1,2,3\}} P_\theta(\text{"True"} \mid \mathcal{I}_i, s_i^{(j)})$$
+$$\hat{y}_i = \underset{j \in \{1,2,3\}}{\arg\max} \ P_\theta\!\left(\texttt{"True"} \mid \mathcal{I}_i,\ s_i^{(j)}\right)$$
 
 500 items × 3 statements = **1,500 forward passes**.
 
@@ -187,9 +164,7 @@ False. Answer with only one word: True or False.
 
 **Model:** `Qwen2.5-VL-3B-Instruct`, joint 3-statement prompt, reason→answer
 
-$$\hat{y}_i = \arg\max_{j \in \{1,2,3\}} P_{\theta_{3B}}(j \mid \mathcal{I}_i, s_i^{(1)}, s_i^{(2)}, s_i^{(3)}, \text{"exactly one is True"})$$
-
-$$\text{output}_i = (r_i, \text{"Answer: "}\hat{y}_i)$$
+$$\text{output}_i = \langle\, r_i,\ \texttt{Answer: }\hat{y}_i \,\rangle$$
 
 500 items × 1 joint prompt = **500 forward passes**.
 
@@ -199,23 +174,10 @@ $$\text{output}_i = (r_i, \text{"Answer: "}\hat{y}_i)$$
 
 **Model:** `Qwen2.5-VL-7B-Instruct`, 4-bit NF4, `MAX_PIXELS=1024×28×28`, `max_new_tokens=256`
 
-$$\hat{y}_i = \arg\max_{j \in \{1,2,3\}} P_\theta(j \mid \mathcal{I}_i, s_i^{(1)}, s_i^{(2)}, s_i^{(3)}, \text{"exactly one is True"})$$
+$$\hat{y}_i = \underset{j \in \{1,2,3\}}{\arg\max} \
+    P_\theta\!\left(j \mid \mathcal{I}_i,\ s_i^{(1)}, s_i^{(2)}, s_i^{(3)},\ \text{``exactly one is True''}\right)$$
 
-$$\text{output}_i = (r_i, \text{"Answer: "}\hat{y}_i)$$
-
-```
-You are a visual fact-checker examining an image from the Arab world.
-Below are THREE statements about this image. Exactly ONE statement is
-grounded in the image (True). The other two are plausible-sounding
-hallucinations (False).
-
-Statement 1: {s0}  Statement 2: {s1}  Statement 3: {s2}
-
-Instructions:
-- Study the image carefully.
-- Reason step by step about each statement.
-- On the very last line write ONLY: "Answer: X" where X is 1, 2, or 3.
-```
+$$\text{output}_i = \langle\, r_i,\ \texttt{Answer: }\hat{y}_i \,\rangle$$
 
 ---
 
@@ -223,9 +185,7 @@ Instructions:
 
 **Model:** `Qwen2.5-VL-3B-Instruct`, joint 3-statement prompt, answer→reason
 
-$$\hat{y}_i = \arg\max_{j \in \{1,2,3\}} P_{\theta_{3B}}(j \mid \mathcal{I}_i, s_i^{(1)}, s_i^{(2)}, s_i^{(3)})$$
-
-$$\text{output}_i = (\text{"Answer: "}\hat{y}_i,\ r_i) \quad \text{(answer → reason)}$$
+$$\text{output}_i = \langle\, \texttt{Answer: }\hat{y}_i,\ r_i \,\rangle$$
 
 500 items × 1 joint prompt = **500 forward passes** (~20 min on T4).
 
@@ -235,9 +195,8 @@ $$\text{output}_i = (\text{"Answer: "}\hat{y}_i,\ r_i) \quad \text{(answer → r
 
 **Model:** `Qwen2.5-VL-7B-Instruct`, 4-bit NF4, `MAX_PIXELS=1024×28×28`, `max_new_tokens=256`
 
-$$\hat{y}_i = \arg\max_{j \in \{1,2,3\}} P_\theta(j \mid \mathcal{I}_i, s_i^{(1)}, s_i^{(2)}, s_i^{(3)})$$
-
-$$\text{output}_i = (\text{"Answer: "}\hat{y}_i,\ r_i) \quad \text{(answer → reason)}$$
+$$\text{output}_i = \langle\, \texttt{Answer: }\hat{y}_i,\ r_i \,\rangle
+\quad \text{(answer → reason)}$$
 
 **Why this works:** the M²CQA paper (arXiv:2602.05437, QCRI/HBKU) found that
 reason-first prompting consistently increases counterfactual hallucination acceptance
@@ -261,111 +220,50 @@ Do not write anything before the Answer line.
 All share the Run 4 base prompt. Only the reasoning instructions after `Answer: X` differ.
 All use `Qwen2.5-VL-7B-Instruct`, 4-bit NF4, `MAX_PIXELS=1024×28×28`, `max_new_tokens=384`.
 
-Every CoT variant is Run 4's decision rule conditioned on an additional reasoning-scaffold
-instruction $c^{(k)}$ appended to the base prompt, where $k$ indexes the CoT variant:
-
-$$\hat{y}_i^{(k)} = \arg\max_{j \in \{1,2,3\}} P_\theta(j \mid \mathcal{I}_i, s_i^{(1)}, s_i^{(2)}, s_i^{(3)}, c^{(k)})$$
-
-$$\text{output}_i = (\text{"Answer: "}\hat{y}_i^{(k)},\ r_i^{(k)})$$
-
-Only $c^{(k)}$ (the scaffold text) changes across CoT1–CoT6; the base image/statement
-conditioning, model weights $\theta$, and answer-first output order are held fixed, so any
-CI difference between variants is attributable purely to the reasoning scaffold.
-
 **CoT2 — Elimination (CI 0.056, negative result)**
-
-$$c^{(\text{CoT2})} = \text{"rule out statements sequentially; the survivor is grounded"}$$
-
 ```
 - Then: which statement can you rule out FIRST and why?
   Which SECOND and why? The remaining statement is grounded.
 ```
 
 **CoT4 — Devil's Advocate (CI 0.048)**
-
-$$c^{(\text{CoT4})} = \text{"steelman each rejected statement, then rebut with visual evidence"}$$
-
 ```
 - Then for each rejected statement: "Why it might seem correct: [argument]
   Why it is wrong: [visual evidence]"
-- Finally confirm why your chosen statement IS grounded.
 ```
 
 **CoT3 — Confidence-Ranked (CI 0.046)**
-
-$$c^{(\text{CoT3})} = \text{"rank the three statements by visual-evidence strength, most to least"}$$
-
 ```
-- Then rank ALL THREE statements:
-  Most grounded: X — [visual evidence]
-  Less grounded: Y — [why evidence is weak]
-  Least grounded: Z — [why contradicted]
+- Then rank ALL THREE: Most grounded / Less grounded / Least grounded
+  with specific visual evidence for each.
 ```
 
 **CoT6 — Socratic (CI 0.046)**
-
-$$c^{(\text{CoT6})} = (q_1, q_2, q_3, q_4) \quad \text{a fixed sub-question sequence}$$
-
 ```
-- Then answer: Q1: Most distinctive visual feature?
+- Q1: Most distinctive visual feature?
   Q2: Does it support statement 1, 2, or 3?
-  Q3: What would the image need to show for the others to be true? Is that present?
-  Q4: Therefore, which statement is grounded?
+  Q3: What would image need to show for others to be true?
+  Q4: Therefore, which is grounded?
 ```
 
 **CoT1 — Evidence-First (CI 0.044)**
-
-$$c^{(\text{CoT1})} = \text{"describe the image in one neutral sentence before reasoning, without reusing statement vocabulary"}$$
-
 ```
-- On the second line write ONE sentence describing only what you literally
-  see (objects, materials, colours, actions) — do NOT use the statement text.
-- Then explain why that statement is grounded and the others are not.
+- One sentence describing only what you literally see
+  (do NOT use statement text) then explain your answer.
 ```
 
-**CoT5 — Attribute Checklist (CI 0.042, best zero-shot single-pass)**
-
-$$c^{(\text{CoT5})} = \{a_{\text{colour/texture}}^{(j)},\ a_{\text{shape/form}}^{(j)},\ a_{\text{context}}^{(j)} : j = 1,2,3\}$$
-
-i.e. a per-statement, per-attribute evidence vector evaluated before the conclusion:
-
+**CoT5 — Attribute Checklist (CI 0.042, best zero-shot)**
 ```
 - For each statement evaluate:
-    (a) Colour/texture evidence for or against
-    (b) Shape/form evidence
-    (c) Contextual evidence
+    (a) Colour/texture evidence  (b) Shape/form  (c) Contextual evidence
   Then state your conclusion.
 ```
 
 ---
 
-### Res1280 — Higher Resolution (CI 0.054, negative result)
-
-**Model:** Run 4 with `MAX_PIXELS=1280×28×28` instead of `1024×28×28`.
-
-Identical decision rule to Run 4; only the image tokenization resolution $P_{\max}$ changes,
-which alters the number of visual tokens $N_v(\mathcal{I}_i)$ fed to the model:
-
-$$N_v(\mathcal{I}_i) = \lceil \min(\text{pixels}(\mathcal{I}_i), P_{\max}) / (28 \times 28) \rceil$$
-
-$$\hat{y}_i = \arg\max_{j \in \{1,2,3\}} P_\theta(j \mid \mathcal{I}_i^{[N_v]}, s_i^{(1)}, s_i^{(2)}, s_i^{(3)})$$
-
-where $\mathcal{I}_i^{[N_v]}$ denotes the image patch-tokenized at $N_v$ tokens under
-$P_{\max}=1280\times28\times28$ (vs. $1024\times28\times28$ for Run 4). Increasing $P_{\max}$
-raises $N_v$ and CI rises from 0.050 to 0.054 — the extra visual tokens diffuse the model's
-attention across a larger input without improving perception of the fine-grained details
-responsible for failure cases. `MAX_PIXELS=1024×28×28` is the optimal setting for zero-shot
-inference.
-
----
-
 ### Run ADE — Latin Square Permutation Ensemble
 
-**Base system:** Run 4 (answer-first, Qwen2.5-VL-7B)
-
-**Motivation:** ordering sensitivity analysis (100 dev items × 6 permutations) found
-10% of items are order-sensitive; position bias range = 0.055 (position 1: 95.5%,
-position 3: 90.0%).
+**Base:** Run 4 (answer-first, Qwen2.5-VL-7B)
 
 | Permutation | Statement order | Run |
 |---|---|---|
@@ -373,156 +271,56 @@ position 3: 90.0%).
 | D | [2, 3, 1] | Run 5a |
 | E | [3, 1, 2] | Run 5b |
 
-Each permutation $\pi \in \{A, D, E\}$ reorders the statements before applying Run 4's
-decision rule, then predictions are combined by majority vote over the original label
-space (each $\hat{y}_i^{(\pi)}$ is mapped back to its statement identity before voting):
-
-$$\hat{y}_i^{(\pi)} = \arg\max_{j \in \{1,2,3\}} P_\theta(j \mid \mathcal{I}_i, s_i^{(\pi(1))}, s_i^{(\pi(2))}, s_i^{(\pi(3))})$$
-
-$$\hat{y}_i^{\text{ADE}} = \arg\max_{j \in \{1,2,3\}} \sum_{\pi \in \{A,D,E\}} \mathbb{1}[\hat{y}_i^{(\pi)} = j]$$
-
-ties → $\hat{y}_i^{(A)}$. Majority vote (2-of-3 wins; 3-way tie → Run 4). CI drops from
-0.050 to **0.042**, closing the dev/devtest gap entirely.
-
-**Speed:** 3 × 500 passes ≈ 15 hours total on T4 (5a and 5b run in parallel).
+Majority vote (2-of-3 wins; 3-way tie → Run 4). CI 0.050 → **0.042**.
+Speed: ~15 hours total on T4 (5a and 5b run in parallel).
 
 ---
 
 ### RunFT — QLoRA Fine-tuned Qwen2.5-VL-7B (best)
 
 **Base model:** `Qwen2.5-VL-7B-Instruct`, 4-bit NF4 QLoRA
-**Training data:** 2,000 items subsampled from `train_en.jsonl` (3,000 total available)
-**Training:** 500 optimizer steps, frozen vision encoder, LoRA rank 8 on LLM layers only
-**Inference prompt:** CoT5 attribute checklist (same as best zero-shot system)
+**Training data:** 2,000 items from `train_en.jsonl` (3,000 available; dev not used)
+**Training:** 500 optimizer steps, frozen vision encoder, LoRA rank 8
+**Prompt:** CoT5 attribute checklist (same as best zero-shot system)
+**Result:** CI **0.032**, Combined Acc **0.968**, CFHR **0.000**
 
-**Architecture:** QLoRA with frozen vision encoder — the ViT tower runs forward (image
-features needed) but backward gradients are blocked at the frozen boundary. Only the
-LLM attention and MLP layers receive LoRA adapters (~20M trainable parameters out of 8.3B
-total, 0.24%). This design:
-- Makes training feasible on dual T4 (16GB each) by eliminating vision backward cost
-- Avoids corrupting the pre-trained visual representations
-- Focuses adaptation on the cultural reasoning and contrastive statement selection task
+**Architecture:** frozen vision encoder eliminates ~70% of backward-pass cost,
+making training feasible on dual T4. Only LLM attention and MLP layers receive
+LoRA adapters (~20M trainable of 8.3B total, 0.24%).
 
-For a frozen 4-bit weight $W_0 \in \mathbb{R}^{d \times k}$ in an LLM attention/MLP
-layer, LoRA adds a low-rank update $\Delta W = BA$ with rank $r=8$:
-
-$$W = W_0 + \Delta W = W_0 + BA, \qquad B \in \mathbb{R}^{d \times r}, A \in \mathbb{R}^{r \times k}, r \ll \min(d,k)$$
-
-$$h = W_0 x + \frac{\alpha}{r} BAx$$
-
-where $x$ is the layer input, $\alpha$ is the LoRA scaling factor, and only $A, B$
-(the frozen ViT is entirely excluded) receive gradients. Training minimizes the
-next-token cross-entropy loss over the answer-first target sequence
-$y_i = (\text{"Answer: "}\hat{y}_i,\ r_i)$ of length $T_i$, restricted to
-the LoRA parameters $\Phi = \{A_\ell, B_\ell\}$ across LLM layers $\ell$:
-
-$$\mathcal{L}(\Phi) = -\frac{1}{N}\sum_{i=1}^{N} \frac{1}{T_i}\sum_{t=1}^{T_i} \log P_{\theta_0, \Phi}(y_{i,t} \mid \mathcal{I}_i, s_i^{(1:3)}, y_{i,<t})$$
-
-$$\Phi^{*} = \arg\min_{\Phi} \mathcal{L}(\Phi), \qquad \theta_0 \ \text{(base + ViT) frozen}$$
-
-**Training dynamics:** loss decreased from 0.396 → 0.041 over 320 logged steps,
-indicating strong convergence on the 2,000-item subset. Inference then applies the
-CoT5 decision rule with the fine-tuned parameters:
-
-$$\hat{y}_i = \arg\max_{j \in \{1,2,3\}} P_{\theta_0, \Phi^{*}}(j \mid \mathcal{I}_i, s_i^{(1)}, s_i^{(2)}, s_i^{(3)}, c^{(\text{CoT5})})$$
-
-**Result:** CI **0.032**, Combined Acc **0.968**, CFHR **0.000**, Q+ **0.968**, Q− **0.984**.
-This is a 23.8% further reduction below the best zero-shot system (CoT5/ADE, CI=0.042),
-confirming that the 21 remaining zero-shot failures were learnable from labelled examples
-rather than irreducible at 7B scale.
-
-**Speed:** inference ~40 minutes on T4 (same as zero-shot, base model + adapter load).
+**Training dynamics:** loss 0.396 → 0.041 over 500 steps — full convergence
+within a single 12h Kaggle session.
 
 ---
 
-### RunFT-3B — QLoRA Fine-tuned Qwen2.5-VL-3B
+### RunFT-3k — QLoRA 3000 images (incomplete convergence)
 
-**Base model:** `Qwen2.5-VL-3B-Instruct`, 4-bit NF4 QLoRA
-**Training data:** 2,000 items subsampled from `train_en.jsonl` (same subset as RunFT)
-**Training:** frozen vision encoder, LoRA rank 8 on LLM layers only (same recipe as RunFT)
-**Inference prompt:** CoT5 attribute checklist
+**Base model:** `Qwen2.5-VL-7B-Instruct`, 4-bit NF4 QLoRA
+**Training data:** 3,000 items from `train_en.jsonl` (full training split)
+**Training:** ~600 steps across three Kaggle sessions (step_100→300→600)
+**Result:** CI **0.036** — worse than RunFT (CI 0.032)
 
-Identical objective and adapter structure to RunFT, with the frozen base swapped from
-$\theta_0^{7B}$ to $\theta_0^{3B}$ (LoRA rank $r=8$, same $A,B$ shapes relative to the
-smaller layer widths):
-
-$$\Phi_{3B}^{*} = \arg\min_{\Phi} \mathcal{L}(\Phi; \theta_0^{3B})$$
-
-$$\hat{y}_i = \arg\max_{j \in \{1,2,3\}} P_{\theta_0^{3B}, \Phi_{3B}^{*}}(j \mid \mathcal{I}_i, s_i^{(1)}, s_i^{(2)}, s_i^{(3)}, c^{(\text{CoT5})})$$
-
-where $\mathcal{L}(\cdot; \theta_0^{3B})$ is the same cross-entropy loss defined above,
-evaluated with the 3B backbone frozen in place of the 7B one. The resulting CI gap
-
-$$\text{CI(RunFT-3B)} - \text{CI(RunFT)} = 0.050 - 0.032 = 0.018$$
-
-is attributable entirely to $\theta_0^{3B}$ vs. $\theta_0^{7B}$ base capacity, since
-$\mathcal{L}$, the LoRA rank, the training data, and $c^{(\text{CoT5})}$ are held fixed.
-
-**Result:** CI **0.050**, Combined Acc **0.950**, CFHR **0.000**, Q+ **0.950**, Q− **0.975**.
-Training wall-clock/duration not recorded for this run.
-
-**Takeaway:** applying the exact RunFT fine-tuning recipe to the smaller 3B backbone
-recovers the CI 0.050 level of zero-shot Run 4 (7B) but plateaus there — it does not
-reach either the best zero-shot prompting system (CoT5, 0.042) or the 7B fine-tuned
-system (RunFT, 0.032). Comparing RunFT-3B against Run 5 (3B, answer-first, zero-shot,
-CI 0.082) shows fine-tuning still delivers a large relative gain at 3B scale (−39.0%),
-but the ceiling it reaches is capped by base model capacity, not by the amount or
-quality of task adaptation. In other words: at 3B, QLoRA fine-tuning is necessary but
-not sufficient to match what 7B achieves either zero-shot or fine-tuned.
-
----
-
-### RunFT-3B (3k) — QLoRA Fine-tuned Qwen2.5-VL-3B, Full Train Set
-
-**Base model:** `Qwen2.5-VL-3B-Instruct`, 4-bit NF4 QLoRA
-**Training data:** all 3,000 items in `train_en.jsonl` (vs. the 2,000-item subsample used
-for RunFT-3B above)
-**Training:** frozen vision encoder, LoRA rank 8 on LLM layers only (identical recipe to
-RunFT-3B; training duration not recorded)
-**Inference prompt:** CoT5 attribute checklist, answer-first
-**Inference notebook:** `finetune/step-3-qlora-q3b-3k-inference.ipynb`
-(`RUN_ID = runFT_qlora_3b`, `MAX_PIXELS=1024×28×28`, `MAX_NEW_TOKENS=256`)
-
-This isolates the effect of training-set size at fixed model scale and fixed LoRA recipe:
-only the number of labelled fine-tuning examples changes relative to RunFT-3B.
-
-$$\Phi_{3B,3k}^{*} = \arg\min_{\Phi} \mathcal{L}(\Phi; \theta_0^{3B}) \ \text{over all } N=3000 \text{ training items}$$
-
-Inference on `devtest` resolved all 500 items on the primary answer-first pass with
-**zero fallback triggers** (0.0%), and predictions were submitted to
-[Codabench 17051](https://www.codabench.org/competitions/17051).
-
-**Result:** CI **0.044**, Combined Acc **0.956**, CFHR **0.000**, Q+ **0.956**, Q− **0.978**.
-Training/inference duration not recorded for this run.
-
-$$\text{CI(RunFT-3B)} - \text{CI(RunFT-3B (3k))} = 0.050 - 0.044 = 0.006 \quad (-12.0\% \text{ relative})$$
-
-**Takeaway:** the extra 1,000 training items buy a real, if partial, improvement — CI
-drops from 0.050 to 0.044, matching CoT1's zero-shot evidence-first CoT and beating
-CoT4, CoT3, and CoT6. But it still does not reach the best zero-shot ceiling (CoT5/ADE,
-0.042) or the 7B fine-tune (RunFT, 0.032). Combined with the earlier RunFT-3B result,
-this suggests base model capacity (3B vs. 7B) remains the dominant constraint at this
-task: more training data helps at the margin, but scaling the backbone helps more.
+Training ran across three sequential sessions due to Kaggle's 12h limit
+(step1: 0→300, step2: 300→600, step3: 600→750 target but timed out again).
+Loss was still at 0.217 at step 600 — not fully converged. The 2,000-item
+run converged to loss 0.041 within a single session and is the stronger system.
 
 ---
 
 ## System Comparison
 
-| | R1 | R3 | R2 | R5 | CoT2 | Res1280 | R4 | **FT-3B** | CoT4 | CoT3 | CoT6 | CoT1 | **FT-3B (3k)** | CoT5 | ADE | **FT** |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| Model | 3B | 3B | 7B | 3B | 7B | 7B | 7B | **3B+LoRA** | 7B | 7B | 7B | 7B | **3B+LoRA** | 7B | 7B×3 | **7B+LoRA** |
-| Passes | 3 | 1 | 1 | 1 | 1 | 1 | 1 | **1** | 1 | 1 | 1 | 1 | **1** | 1 | 3 | **1** |
-| Joint | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | **✅** | ✅ | ✅ | ✅ | ✅ | **✅** | ✅ | ✅ | **✅** |
-| Ans first | — | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | **✅** | ✅ | ✅ | ✅ | ✅ | **✅** | ✅ | ✅ | **✅** |
-| CoT style | — | free | free | free | elim | free | free | **attr** | devil | rank | socratic | evid | **attr** | attr | free | **attr** |
-| Train items | — | — | — | — | — | — | — | **2,000** | — | — | — | — | **3,000** | — | — | **2,000** |
-| Fine-tuned | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | **✅** | ❌ | ❌ | ❌ | ❌ | **✅** | ❌ | ❌ | **✅** |
-| Ensemble | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
-| CI ↓ | 0.257 | 0.142 | 0.092 | 0.082 | 0.056 | 0.054 | 0.050 | **0.050** | 0.048 | 0.046 | 0.046 | 0.044 | **0.044** | 0.042 | 0.042 | **0.032** |
-| Comb ↑ | 0.740 | 0.858 | 0.908 | 0.918 | 0.944 | 0.946 | 0.950 | **0.950** | 0.952 | 0.954 | 0.954 | 0.956 | **0.956** | 0.958 | 0.958 | **0.968** |
-| CFHR ↓ | — | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | **0.000** | 0.000 | 0.000 | 0.000 | 0.000 | **0.000** | 0.000 | 0.000 | **0.000** |
-| Q+ ↑ | 0.912 | 0.858 | 0.908 | 0.918 | 0.944 | 0.946 | 0.950 | **0.950** | 0.952 | 0.954 | 0.954 | 0.956 | **0.956** | 0.958 | 0.958 | **0.968** |
-| Q− ↑ | 0.888 | 0.929 | 0.954 | 0.959 | 0.972 | 0.973 | 0.975 | **0.975** | 0.976 | 0.977 | 0.977 | 0.978 | **0.978** | 0.979 | 0.979 | **0.984** |
+| | R1 | R3 | R2 | R5 | R4 | CoT5 | ADE | FT-3k | **FT** |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| Model | 3B | 3B | 7B | 3B | 7B | 7B | 7B×3 | 7B+LoRA | **7B+LoRA** |
+| Train items | — | — | — | — | — | — | — | 3000 | **2000** |
+| Train steps | — | — | — | — | — | — | — | ~600 | **500** |
+| Converged | — | — | — | — | — | — | — | ❌ | **✅** |
+| Fine-tuned | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | **✅** |
+| CI ↓ | 0.257 | 0.142 | 0.092 | 0.082 | 0.050 | 0.042 | 0.042 | 0.036 | **0.032** |
+| Comb ↑ | 0.740 | 0.858 | 0.908 | 0.918 | 0.950 | 0.958 | 0.958 | 0.964 | **0.968** |
+| CFHR ↓ | — | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | **0.000** |
+| Q+ ↑ | 0.912 | 0.858 | 0.908 | 0.918 | 0.950 | 0.958 | 0.958 | 0.964 | **0.968** |
+| Q− ↑ | 0.888 | 0.929 | 0.954 | 0.959 | 0.975 | 0.979 | 0.979 | 0.982 | **0.984** |
 
 ---
 
@@ -532,22 +330,18 @@ task: more training data helps at the margin, but scaling the backbone helps mor
 IE2026-HalDetect/
 ├── README.md
 └── Development/
-    ├── baseline/                   # Run 1: per-statement baseline (Qwen2.5-VL-3B)
-    ├── joint-3-q7b/                # Run 2: joint prompt, reason→answer (Qwen2.5-VL-7B)
-    ├── answer-first-q3b/           # Run 5: joint prompt, answer→reason (Qwen2.5-VL-3B)
-    ├── answer-first-q7b/           # Run 4: joint prompt, answer→reason (Qwen2.5-VL-7B)
-    ├── cot-variants/               # CoT1–CoT6: structured CoT ablations
-    ├── ensemble-ADE/               # Run ADE: Latin square permutation ensemble + majority vote
-    └── finetune/                   # RunFT / RunFT-3B: QLoRA training + inference notebooks
-        └── step-3-qlora-q3b-3k-inference.ipynb   # RunFT-3B (3k): 3B adapter trained on
-                                                    # the full 3,000-item train set,
-                                                    # devtest inference, CI 0.044
+    ├── baseline/                   # Run 1
+    ├── joint-3-q7b/                # Run 2
+    ├── answer-first-q3b/           # Run 5
+    ├── answer-first-q7b/           # Run 4
+    ├── cot-variants/               # CoT1–CoT6
+    ├── ensemble-ADE/               # Run ADE
+    └── finetune/
+        ├── step1-qlora-q7b-3k-uptostep300.ipynb
+        ├── step2-continue-from-300ckpt-qlora-q7b-3k.ipynb
+        ├── step3-continue-from-600ckpt-qlora-q7b-3k.ipynb
+        └── qlora-infer-final.ipynb
 ```
-
-Run 3 shares the notebook from `joint-3-q7b/` with `VLM_MODEL` switched to the 3B variant.
-Run 5 shares the notebook from `answer-first-q7b/` with `VLM_MODEL` switched to the 3B variant.
-RunFT-3B shares the training/inference notebooks from `finetune/` with `VLM_MODEL` switched
-to `Qwen/Qwen2.5-VL-3B-Instruct`.
 
 ---
 
@@ -555,14 +349,9 @@ to `Qwen/Qwen2.5-VL-3B-Instruct`.
 
 **QCRI/AynVQA-ArabicNLP26** — config `task1b_en`
 
-```python
-from datasets import load_dataset
-ds = load_dataset("QCRI/AynVQA-ArabicNLP26", "task1b_en", split="devtest")
-```
-
 | Split | Items | Labels | Use |
 |-------|------:|:---:|---|
-| train | 3,000 | ✅ | training and fine-tuning |
+| train | 3,000 | ✅ | fine-tuning only (dev not used for training) |
 | dev | 500 | ✅ | local validation |
 | devtest | 500 | ❌ blind | dev-phase leaderboard |
 | test | 1,000 | ❌ blind | final ranking |
@@ -575,24 +364,15 @@ ds = load_dataset("QCRI/AynVQA-ArabicNLP26", "task1b_en", split="devtest")
 |-----|----------|:---:|:---:|
 | Run 1 | `baseline/SyedT1.ipynb` | T4 | ~15 min |
 | Run 2 | `joint-3-q7b/joint-3-stat-qwen2p5vl7b.ipynb` | T4 | ~40 min |
-| Run 3 | same as Run 2, `VLM_MODEL = Qwen/Qwen2.5-VL-3B-Instruct` | T4 | ~20 min |
-| Run 5 | same as Run 4, `VLM_MODEL = Qwen/Qwen2.5-VL-3B-Instruct` | T4 | ~20 min |
+| Run 3 | same as Run 2, `VLM_MODEL=Qwen2.5-VL-3B-Instruct` | T4 | ~20 min |
+| Run 5 | same as Run 4, `VLM_MODEL=Qwen2.5-VL-3B-Instruct` | T4 | ~20 min |
 | Run 4 | `answer-first-q7b/run4-answer-first-qwen2p5vl7b.ipynb` | T4 | ~40 min |
 | CoT1–6 | `cot-variants/CoT[1-6]_*.ipynb` | T4 | ~40 min each |
 | Run 5a | `ensemble-ADE/run5a-perm-D-qwen2p5vl7b.ipynb` | T4 | ~5 hrs |
 | Run 5b | `ensemble-ADE/run5b-perm-E-qwen2p5vl7b.ipynb` | T4 | ~5 hrs |
 | Run ADE | `ensemble-ADE/majority-vote-combiner-ADE.ipynb` | None | <1 min |
-| RunFT train | `finetune/finetune-qlora-train-v6-selfcontained.ipynb` | T4×2 | ~10 hrs |
+| RunFT train | `finetune/finetune-qlora-3k-v7.ipynb` (2k subset) | T4×2 | ~5 hrs |
 | RunFT infer | `finetune/qlora-infer-final.ipynb` | T4 | ~40 min |
-| RunFT-3B train | same as RunFT train, `VLM_MODEL = Qwen/Qwen2.5-VL-3B-Instruct` | T4×2 | not recorded |
-| RunFT-3B infer | same as RunFT infer, `VLM_MODEL = Qwen/Qwen2.5-VL-3B-Instruct` | T4 | not recorded |
-| RunFT-3B (3k) infer | `finetune/step-3-qlora-q3b-3k-inference.ipynb` — 3B adapter retrained on the full 3,000-item train set, `SPLIT='devtest'` | T4×2 | not recorded (CI 0.044 via Codabench) |
-
-1. Upload notebook to Kaggle → enable T4 GPU → add HF_TOKEN secret
-2. Set `SPLIT = 'dev'` to score locally; `SPLIT = 'devtest'` for Codabench submission
-3. Run All → download predictions zip → submit to Codabench 17051
-
-Run 5a and 5b can be run in parallel on two separate Kaggle sessions.
 
 ---
 
