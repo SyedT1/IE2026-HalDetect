@@ -32,6 +32,13 @@ QWEN = HERE.parent / "qwen2p5-3b-7b"
 MODEL_2B = "OpenGVLab/InternVL2-2B"
 MODEL_8B = "OpenGVLab/InternVL2-8B"
 
+# Which split the generated notebooks are hardwired to. Overridden by --split, so the
+# whole suite can be flipped between "score it here" and "score it on Codabench" without
+# anyone hand-editing eleven config cells.
+#   dev     -> labelled. The notebook prints CI/accuracy/CFHR/Q+/Q- in its own log.
+#   devtest -> blind. Produces prediction_en.zip only; Codabench holds the answer key.
+SPLIT = "dev"
+
 
 # ── notebook plumbing ────────────────────────────────────────────────────────
 
@@ -368,7 +375,7 @@ os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 REPO_ID   = "QCRI/AynVQA-ArabicNLP26"
 TASK      = "task1b"
 LANG      = "en"
-SPLIT     = "devtest"   # "devtest"/"test" -> blind (submit) | "dev" -> labelled (scored locally)
+SPLIT     = "__SPLIT__"   # "dev" -> labelled, notebook prints CI | "devtest" -> blind, submit to Codabench
 MAX_ITEMS = None        # e.g. 5 for a smoke test; None = whole split
 
 RUN_ID    = "{run_id}"
@@ -389,7 +396,8 @@ print(f"config: {{TASK}}_{{LANG}}/{{SPLIT}} | {{VLM_MODEL}} | quantized={{QUANTI
 print(f"MAX_TILES={{MAX_TILES}} | MAX_NEW_TOKENS={{MAX_NEW_TOKENS}}")
 print("Comparing against Qwen {ref_name} (CI {ci:.3f}). Estimated inference: {est}")
 '''.format(run_id=run_id, model=model, quantize=quantize, max_tiles=max_tiles,
-           max_new_tokens=max_new_tokens, ref_name=ref_name, ref=ref, ci=ref["CI"], est=est)
+           max_new_tokens=max_new_tokens, ref_name=ref_name, ref=ref, ci=ref["CI"],
+           est=est).replace("__SPLIT__", SPLIT)
 
 
 # Baseline: one True/False judgement per statement. Same prompt as Qwen Run 1.
@@ -743,10 +751,14 @@ def all_builds() -> dict[str, tuple[str, dict]]:
 
 
 def main():
+    global SPLIT
     ap = argparse.ArgumentParser()
     ap.add_argument("--all", action="store_true", help="build all 11 notebooks (default: smoke-test 2)")
     ap.add_argument("--only", nargs="+", metavar="KEY", help="build just these runs, e.g. --only baseline joint-3-i2b")
+    ap.add_argument("--split", choices=["dev", "devtest"], default=SPLIT,
+                    help="split to hardwire into the config cell (default: %(default)s)")
     args = ap.parse_args()
+    SPLIT = args.split
 
     builds = all_builds()
     if args.only:
