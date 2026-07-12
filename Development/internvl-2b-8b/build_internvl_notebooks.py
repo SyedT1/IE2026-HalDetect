@@ -726,7 +726,10 @@ def all_builds() -> dict[str, tuple[str, dict]]:
     b = {}
     b["baseline"] = build_baseline()
     b["joint-3-i2b"] = build_joint(
-        "joint-3-i2b", "joint-3-stat-internvl2b.ipynb", "run3_joint_internvl2b", MODEL_2B, False,
+        # 4-bit, because Qwen's 3B joint runs are 4-bit. Only Qwen's *baseline* is fp16 --
+        # the joint runs quantise the small model too, and quantisation is not free, so
+        # running InternVL at fp16 here would hand it a precision advantage Qwen never had.
+        "joint-3-i2b", "joint-3-stat-internvl2b.ipynb", "run3_joint_internvl2b", MODEL_2B, True,
         answer_first=False, qwen_ref_name="Run 3 (Qwen-3B)", qwen_ci=0.142,
         title="InternVL2-2B — joint 3-statement prompt, reason-first",
         blurb="Replicates **Qwen Run 3** (`../qwen2p5-3b-7b/joint-3-q3b/`). All three statements in "
@@ -738,8 +741,9 @@ def all_builds() -> dict[str, tuple[str, dict]]:
         blurb="Replicates **Qwen Run 2** (`../qwen2p5-3b-7b/joint-3-q7b/`). Same joint reason-first "
               "prompt as the 2B run, so this isolates model scale.")
     b["answer-first-joint-i2b"] = build_joint(
+        # 4-bit, matching Qwen's 3B answer-first run. See the note on joint-3-i2b above.
         "answer-first-joint-i2b", "answer-first-internvl2b.ipynb", "run5_answer_first_internvl2b",
-        MODEL_2B, False, answer_first=True, qwen_ref_name="Run 5 (Qwen-3B)", qwen_ci=0.082,
+        MODEL_2B, True, answer_first=True, qwen_ref_name="Run 5 (Qwen-3B)", qwen_ci=0.082,
         title="InternVL2-2B — joint 3-statement prompt, answer-first",
         blurb="Replicates **Qwen Run 5** (`../qwen2p5-3b-7b/answer-first-joint-q3b/`). Identical to the "
               "reason-first 2B run except the answer comes on line 1 — this isolates prompt order.")
