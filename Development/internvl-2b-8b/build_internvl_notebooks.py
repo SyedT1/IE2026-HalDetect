@@ -33,11 +33,15 @@ MODEL_2B = "OpenGVLab/InternVL2-2B"
 MODEL_8B = "OpenGVLab/InternVL2-8B"
 
 # Which split the generated notebooks are hardwired to. Overridden by --split, so the
-# whole suite can be flipped between "score it here" and "score it on Codabench" without
-# anyone hand-editing eleven config cells.
-#   dev     -> labelled. The notebook prints CI/accuracy/CFHR/Q+/Q- in its own log.
+# whole suite can be flipped without anyone hand-editing eleven config cells.
 #   devtest -> blind. Produces prediction_en.zip only; Codabench holds the answer key.
-SPLIT = "dev"
+#   dev     -> labelled. The notebook prints CI/accuracy/CFHR/Q+/Q- in its own log.
+#
+# devtest is the default because every published Qwen number is devtest, and the two splits
+# genuinely disagree (Run 4: 0.042 dev, 0.050 devtest). A dev run cannot be dropped into the
+# Qwen results table -- and Qwen's dev numbers are only known for Run 4, so there is nothing
+# to compare the other ten against. Use dev to validate that a run works, devtest to report.
+SPLIT = "devtest"
 
 
 # ── notebook plumbing ────────────────────────────────────────────────────────

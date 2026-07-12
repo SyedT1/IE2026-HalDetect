@@ -112,6 +112,38 @@ def score(csv_path: Path, gold: dict[str, int]) -> dict | None:
     }
 
 
+def health(csv_path: Path) -> dict:
+    """Soundness checks that need no labels, so they also work on a blind devtest run.
+
+    They cannot give you CI, but they catch the failure that actually matters: the model
+    ignoring the "Answer: X" format, which silently drops the run onto the per-statement
+    fallback path and makes it measure something other than what it claims to.
+
+    Gold always marks exactly one statement True. A joint run therefore has to emit exactly
+    one True per item by construction -- if it does not, the joint parse failed. A
+    per-statement run (the baseline) judges each statement independently and has no such
+    guarantee, so a low rate there is a real weakness of the model, not a broken parse.
+    """
+    rows = list(csv.DictReader(open(csv_path, encoding="utf-8")))
+    by_item: dict[str, dict[int, str]] = {}
+    empty_raw = 0
+    for r in rows:
+        by_item.setdefault(r["id"], {})[int(r["statement_index"])] = r["prediction_parsed"]
+        if r["statement_index"] == "0" and not r["raw_prediction"].strip():
+            empty_raw += 1
+
+    counts = [sum(v == "true" for v in d.values()) for d in by_item.values()]
+    n = len(by_item)
+    return {
+        "items": n,
+        "rows": len(rows),
+        "exactly_one_true": sum(c == 1 for c in counts) / n,
+        "no_true": sum(c == 0 for c in counts) / n,
+        "multi_true": sum(c > 1 for c in counts) / n,
+        "empty_raw": empty_raw,
+    }
+
+
 def report(csv_path: Path, gold: dict[str, int]) -> None:
     folder = csv_path.parent.name
     ref_name, ref_devtest, ref_dev = QWEN_REF.get(folder, ("Qwen", float("nan"), None))
@@ -119,7 +151,28 @@ def report(csv_path: Path, gold: dict[str, int]) -> None:
 
     print(f"\n{csv_path.relative_to(HERE)}")
     if m is None:
-        print("  devtest (blind) — no labels exist for these ids. Only Codabench can score it.")
+        h = health(csv_path)
+        joint = folder != "baseline"
+        print(f"  devtest (blind) — {h['items']} items. No labels exist for these ids, so CI "
+              f"cannot be computed here; only Codabench can score it.")
+        print(f"  Health check (label-free):")
+        print(f"    {'exactly one True per item':<30} {h['exactly_one_true']:6.1%}   (gold: 100%)")
+        print(f"    {'no True at all':<30} {h['no_true']:6.1%}")
+        print(f"    {'two or three True':<30} {h['multi_true']:6.1%}")
+        if h["empty_raw"]:
+            print(f"    {'empty model replies':<30} {h['empty_raw']}")
+        if joint and h["exactly_one_true"] < 0.999:
+            print(f"  !! A joint run must emit exactly one True per item by construction. "
+                  f"{1 - h['exactly_one_true']:.1%} did not — the 'Answer: X' parse is falling "
+                  f"back to per-statement judging. Treat this run as suspect.")
+        elif joint:
+            print(f"  Sound: the joint parse held on every item.")
+        else:
+            # Per-statement baseline: no structural guarantee, so this is a capability read.
+            floor = 1 - h["exactly_one_true"]
+            print(f"  Per-statement run, so a sub-100% rate is the model's weakness, not a "
+                  f"parse failure.\n  Combined accuracy is capped at {h['exactly_one_true']:.1%}, "
+                  f"so CI >= {floor:.3f} whatever Codabench returns.")
         return
 
     # Compare like with like: we scored dev, so use Qwen's dev number when we have it.

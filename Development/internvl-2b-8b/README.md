@@ -139,29 +139,46 @@ after any rebuild you must re-import.
 - **Internet → On.** Off by default, and needs a phone-verified account. Without it both
   the pip install and the Hugging Face download fail.
 
-**3. Smoke test.** In the config cell set `MAX_ITEMS = 5`, `SPLIT = "dev"`. Run All, ~6 min
-(mostly the model download). Check `unparseable -> defaulted to 'false': 0` — that is the
-real signal. Ignore the CI, it is computed over 5 items and means nothing.
+**3. Run.** Change nothing in the notebook — it ships on `devtest`, which is the split every
+published Qwen number uses. Use **Save Version → Save & Run All (Commit)** so it runs
+detached on Kaggle's servers; an interactive session dies when you close the tab.
 
-**4. Full run.** `MAX_ITEMS = None`, `SPLIT = "dev"`. Use **Save Version → Save & Run All
-(Commit)** so it runs detached on Kaggle's servers — an interactive session dies if you
-close the tab. The notebook prints CI next to the Qwen reference when it finishes.
+**4. Collect.** From the finished run's **Output** tab, download two files into that run's
+folder, next to its notebook (the same convention the Qwen folders use):
+- `prediction_en.zip` — the Codabench submission (`id,statement_index,prediction`).
+- `predictions_<RUN_ID>_en.csv` — the same predictions **plus the model's raw reply text**.
+  Keep this. It is the only record of what the model actually said, it is what `score_local.py`
+  reads, and it is what any error analysis has to read.
 
-**5. Collect.** From the finished run's **Output** tab, download:
-- `prediction_en.zip` — the Codabench-format submission (`id,statement_index,prediction`).
-- `predictions_<RUN_ID>_en.csv` — same predictions **plus the model's raw reply text**.
-  Keep this: it is the only record of what the model actually said, and it is what any
-  error analysis has to read.
+**5. Check it is sound.** devtest is blind, so the notebook cannot print a score. Run:
 
-Commit both into that run's folder, next to its notebook — the same convention the Qwen
-folders use. Then add the row to the results table above.
+```bash
+python score_local.py --all
+```
 
-**6. Leaderboard number (optional).** Flip `SPLIT = "devtest"`, Run All again, and submit
-the new `prediction_en.zip` to [Codabench 17051](https://www.codabench.org/competitions/17051/).
-devtest is blind, so this is the only way to score it — and the Qwen table in the top-level
-README is devtest, so this is the number that belongs in the paper. If you keep both, name
-the dev artifacts `prediction_en_dev.zip` / `predictions_<RUN_ID>_en_dev.csv` so they do not
-collide with the devtest ones.
+On a devtest run it does a label-free health check — the fraction of items given exactly one
+`true`, versus a gold set where exactly one is always true. A **joint** run must hit 100% by
+construction; anything less means the `Answer: X` parse is falling back to per-statement
+judging and the run is measuring the wrong thing. This catches a broken run without spending
+a Codabench submission on it.
+
+**6. Score it.** Submit `prediction_en.zip` to
+[Codabench 17051](https://www.codabench.org/competitions/17051/) and put the CI in the results
+table. Codabench is the only holder of the devtest answer key.
+
+### Getting a number without Codabench
+
+Rebuild the suite against the labelled split and the notebooks grade themselves, printing
+CI / combined / CFHR / Q+ / Q− in their own logs:
+
+```bash
+python build_internvl_notebooks.py --all --split dev
+```
+
+Useful for validating a run, or for an unattended run that would otherwise report nothing.
+But a dev number **cannot go in the results table**: the splits disagree (Run 4 is 0.042 on
+dev, 0.050 on devtest), and Qwen's dev CI is only published for Run 4 — there is nothing to
+compare the other ten against. Validate on dev, report on devtest.
 
 ## Regenerating the notebooks
 
