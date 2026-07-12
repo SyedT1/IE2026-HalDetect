@@ -1,0 +1,6 @@
+{
+  "ci_baseline": 0.096,
+  "acc_baseline": 0.904,
+  "n_dev": 500,
+  "max_pixels": 602112
+}

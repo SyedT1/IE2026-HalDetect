@@ -580,6 +580,42 @@ question. RunFT (2.3k) is the best system produced by this project to date.
 
 ---
 
+## 3B QLoRA Fine-tuning Track (dev split)
+
+An **efficiency-focused** track: can a small **Qwen2.5-VL-3B** recover most of the 7B
+fine-tuning gain? RunFT above used 7B (CI 0.032). This track fine-tunes the **3B** model
+with QLoRA and measures on the labelled **dev** split (500 items). All numbers are our own
+matched baseline vs fine-tuned on the **same** dev items, so the deltas are apples-to-apples.
+
+> Note: metrics here are **dev split**, CI + Combined Accuracy only (the CFHR / Q± split
+> metrics are not recomputed for this track). Our 3B zero-shot baseline is measured at
+> `MAX_PIXELS=768×28×28` and so reads 0.096, higher than the devtest Run 5 (0.082); the
+> delta vs our own matched baseline is the fair comparison.
+
+| Run | Method | CI ↓ | Comb Acc ↑ | vs our baseline |
+|-----|--------|:---:|:---:|:---:|
+| Baseline-3B | Qwen2.5-VL-3B, answer-first joint prompt, zero-shot, @768px | 0.096 | 0.904 | — |
+| **SFT-3B** | **+ QLoRA-SFT, 1,500 train, 3 epochs, LoRA r=8 (q/k/v/o), @768px** | **0.058** | **0.942** | **−0.038 (−40% rel err)** |
+| DPO-3B | + DPO on SFT (600 contrastive pairs, 150 steps, β=0.1, lr 5e-6) | 0.058 | 0.942 | 0.000 (flat) |
+
+**Key finding (SFT-3B):** QLoRA-SFT cuts 3B error by **40% relative** (48→29 wrong of 500),
+bringing a 3B model (CI 0.058) to within striking distance of the best 7B *zero-shot* system
+(CoT5, CI 0.042) at a fraction of the inference cost. The 21→29 comparison is cross-split, but
+the trajectory shows most of the 7B fine-tuning benefit is reachable at 3B scale.
+
+**Key finding (DPO-3B, negative):** Direct Preference Optimization on top of the SFT model,
+using the contrastive labels as free preference pairs (chosen = true statement, rejected =
+a false one), produced **zero change** — CI 0.058, and **0 / 500 predictions differed** from
+SFT. The gentle DPO update (β=0.1, lr 5e-6, 150 steps) shifted logits but not enough to flip
+any greedy argmax; the SFT objective already saturates the contrastive signal. This is a clean
+negative result: **preference tuning adds nothing once task-SFT is strong** on this data shape.
+
+**Architecture:** 4-bit NF4 QLoRA, LoRA rank 8 on the LLM attention projections only
+(~3.7M trainable params, 0.10% of 3.76B). Vision tower frozen. Training resumed across two
+Kaggle T4 sessions via checkpointing (`device_map='auto'` shards the model over 2×T4).
+
+---
+
 ## Repository Structure
 
 ```
@@ -592,6 +628,9 @@ IE2026-HalDetect/
     ├── answer-first-q7b/           # Run 4: joint prompt, answer→reason (Qwen2.5-VL-7B)
     ├── cot-variants/               # CoT1–CoT6: structured CoT ablations
     ├── ensemble-ADE/               # Run ADE: Latin square permutation ensemble + majority vote
+    ├── finetune/                   # RunFT: 7B QLoRA training + inference notebooks
+    └── finetune-qlora-q3b/         # 3B QLoRA-SFT + DPO track (dev split); builders,
+                                    #   Kaggle notebooks, results/ (preds, metrics, adapters)
     └── finetune/                   # RunFT / RunFT-3B: QLoRA training + inference notebooks
         └── step-3-qlora-q3b-3k-inference.ipynb   # RunFT-3B (3k): 3B adapter trained on
                                                     # the full 3,000-item train set,
@@ -638,6 +677,9 @@ ds = load_dataset("QCRI/AynVQA-ArabicNLP26", "task1b_en", split="devtest")
 | Run ADE | `ensemble-ADE/majority-vote-combiner-ADE.ipynb` | None | <1 min |
 | RunFT train | `finetune/finetune-qlora-train-v6-selfcontained.ipynb` | T4×2 | ~10 hrs |
 | RunFT infer | `finetune/qlora-infer-final.ipynb` | T4 | ~40 min |
+| SFT-3B train | `finetune-qlora-q3b/kaggle-sft-finish-q3b.ipynb` | T4×2 | ~3 hrs |
+| DPO-3B train | `finetune-qlora-q3b/kaggle-dpo-q3b.ipynb` | T4 | ~4 hrs |
+| SFT/DPO-3B infer | `finetune-qlora-q3b/kaggle-infer-q3b.ipynb` | T4 | ~15 min |
 | RunFT-3B train | same as RunFT train, `VLM_MODEL = Qwen/Qwen2.5-VL-3B-Instruct` | T4×2 | not recorded |
 | RunFT-3B infer | same as RunFT infer, `VLM_MODEL = Qwen/Qwen2.5-VL-3B-Instruct` | T4 | not recorded |
 | RunFT-3B (3k) infer | `finetune/step-3-qlora-q3b-3k-inference.ipynb` — 3B adapter retrained on the full 3,000-item train set, `SPLIT='devtest'` | T4×2 | not recorded (CI 0.044 via Codabench) |

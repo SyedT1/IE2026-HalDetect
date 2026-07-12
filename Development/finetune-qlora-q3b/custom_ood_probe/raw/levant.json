@@ -1,0 +1,274 @@
+[
+  {
+    "country": "Jordan",
+    "category": "Geography, Buildings & Landmarks",
+    "subcategory": "Famous Landmarks",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/6/62/Al_Khazneh_Petra_edit_2.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Al_Khazneh_Petra_edit_2.jpg",
+    "visible_content": "The rock-cut classical facade of Al-Khazneh (the Treasury) carved into the sandstone cliff at Petra, Jordan.",
+    "statements": [
+      "The rock-cut monument shown is the Treasury (Al-Khazneh) at Petra. True or False?",
+      "The rock-cut monument shown is the Monastery (Ad-Deir) at Petra. True or False?",
+      "The rock-cut monument shown is the Urn Tomb at Petra. True or False?"
+    ],
+    "true_index": 0,
+    "confidence": "high",
+    "license": "CC-BY-SA-2.0"
+  },
+  {
+    "country": "Jordan",
+    "category": "Nature & Animals",
+    "subcategory": "Desert Wildlife",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/0/00/Camels_in_the_Wadi_Rum_desert.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Camels_in_the_Wadi_Rum_desert.jpg",
+    "visible_content": "Camels in the red-sand desert landscape of the protected Wadi Rum area in Jordan.",
+    "statements": [
+      "Arabian oryx are prominently featured in this desert image. True or False?",
+      "Wild donkeys are prominently featured in this desert image. True or False?",
+      "Camels are prominently featured in this desert image. True or False?"
+    ],
+    "true_index": 2,
+    "confidence": "high",
+    "license": "CC-BY-SA-4.0"
+  },
+  {
+    "country": "Jordan",
+    "category": "Food & Cooking",
+    "subcategory": "Traditional Dishes",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/8/86/Mansaf%2C_the_traditional_dish_of_Jordan.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Mansaf,_the_traditional_dish_of_Jordan.jpg",
+    "visible_content": "A plate of Jordanian mansaf: jameed-drenched lamb over ghee-infused rice, decorated with sauteed nuts.",
+    "statements": [
+      "The mansaf dish is garnished with pomegranate seeds. True or False?",
+      "The mansaf dish is garnished with roasted nuts. True or False?",
+      "The mansaf dish is garnished with fried onions. True or False?"
+    ],
+    "true_index": 1,
+    "confidence": "high",
+    "license": "CC-BY-SA-4.0"
+  },
+  {
+    "country": "Jordan",
+    "category": "Geography, Buildings & Landmarks",
+    "subcategory": "Archaeological Sites",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/0/02/2019_Israel_Jordanien_0440_Jerash_Oval_Forum.JPG",
+    "source_page": "https://commons.wikimedia.org/wiki/File:2019_Israel_Jordanien_0440_Jerash_Oval_Forum.JPG",
+    "visible_content": "The colonnaded Oval Forum (Oval Plaza) among the Roman ruins at Jerash, Jordan.",
+    "statements": [
+      "This colonnaded oval plaza is part of the Roman ruins at Palmyra, Syria. True or False?",
+      "This colonnaded oval plaza is part of the Roman ruins at Baalbek, Lebanon. True or False?",
+      "This colonnaded oval plaza is part of the Roman ruins at Jerash, Jordan. True or False?"
+    ],
+    "true_index": 2,
+    "confidence": "high",
+    "license": "CC-BY-SA-4.0"
+  },
+  {
+    "country": "Palestine",
+    "category": "Religion & Spirituality",
+    "subcategory": "Religious Landmarks",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/8/8b/Jerusalem-2013%282%29-Temple_Mount-Dome_of_the_Rock_%28SE_exposure%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Jerusalem-2013(2)-Temple_Mount-Dome_of_the_Rock_(SE_exposure).jpg",
+    "visible_content": "The Dome of the Rock, the gold-domed Islamic shrine on the Temple Mount in Jerusalem's Old City.",
+    "statements": [
+      "The shrine is crowned by a gold-covered dome. True or False?",
+      "The shrine is crowned by a turquoise-tiled dome. True or False?",
+      "The shrine is crowned by a silver-plated dome. True or False?"
+    ],
+    "true_index": 0,
+    "confidence": "high",
+    "license": "CC-BY-SA-4.0"
+  },
+  {
+    "country": "Palestine",
+    "category": "Objects, Materials & Clothing",
+    "subcategory": "Traditional Textiles",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/1/1e/Palestinian_keffiyeh_loom.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Palestinian_keffiyeh_loom.jpg",
+    "visible_content": "A loom weaving a traditional Palestinian keffiyeh at the Hirbawi factory in Hebron, Palestine.",
+    "statements": [
+      "This loom is weaving a traditional Palestinian keffiyeh at a factory in Nablus. True or False?",
+      "This loom is weaving a traditional Palestinian keffiyeh at a factory in Hebron. True or False?",
+      "This loom is weaving a traditional Palestinian keffiyeh at a factory in Ramallah. True or False?"
+    ],
+    "true_index": 1,
+    "confidence": "high",
+    "license": "CC-BY-SA-4.0"
+  },
+  {
+    "country": "Palestine",
+    "category": "Objects, Materials & Clothing",
+    "subcategory": "Traditional Dress",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/c/ce/Ramallah_Dress_%28Palestinian_Thobe%29-3.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Ramallah_Dress_(Palestinian_Thobe)-3.jpg",
+    "visible_content": "A 19th-century village woman's dress (thobe) from Ramallah with traditional Palestinian embroidery.",
+    "statements": [
+      "This embroidered thobe is a traditional village dress from Bethlehem. True or False?",
+      "This embroidered thobe is a traditional village dress from Gaza. True or False?",
+      "This embroidered thobe is a traditional village dress from Ramallah. True or False?"
+    ],
+    "true_index": 2,
+    "confidence": "high",
+    "license": "CC0"
+  },
+  {
+    "country": "Palestine",
+    "category": "Religion & Spirituality",
+    "subcategory": "Religious Landmarks",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/d/d0/Church_of_the_Nativity_%28Bethlehem%29_02.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Church_of_the_Nativity_(Bethlehem)_02.jpg",
+    "visible_content": "The Church of the Nativity basilica in Bethlehem, whose grotto is traditionally venerated as the birthplace of Jesus.",
+    "statements": [
+      "This church is traditionally venerated as the birthplace of Jesus. True or False?",
+      "This church is traditionally venerated as the site of the Last Supper. True or False?",
+      "This church is traditionally venerated as the site of the Ascension. True or False?"
+    ],
+    "true_index": 0,
+    "confidence": "high",
+    "license": "CC-BY-SA-4.0"
+  },
+  {
+    "country": "Lebanon",
+    "category": "Geography, Buildings & Landmarks",
+    "subcategory": "Archaeological Sites",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/c/c8/Baalbek_%28Heliopolis%29%2C_etc._Columns_of_Temple_of_Bacchus_LOC_matpc.07093.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Baalbek_(Heliopolis),_etc._Columns_of_Temple_of_Bacchus_LOC_matpc.07093.jpg",
+    "visible_content": "The tall standing columns of the Temple of Bacchus in the Roman complex at Baalbek, Lebanon (historic photo).",
+    "statements": [
+      "These monumental columns belong to the Temple of Jupiter at Baalbek. True or False?",
+      "These monumental columns belong to the Temple of Bacchus at Baalbek. True or False?",
+      "These monumental columns belong to the Temple of Venus at Baalbek. True or False?"
+    ],
+    "true_index": 1,
+    "confidence": "medium",
+    "license": "Public Domain"
+  },
+  {
+    "country": "Lebanon",
+    "category": "Nature & Animals",
+    "subcategory": "Trees and Forests",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/5/53/Forest_of_The_cedars_of_God.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Forest_of_The_cedars_of_God.jpg",
+    "visible_content": "Cedar trees of the Forest of the Cedars of God (Al Arz) above Bsharri, Lebanon.",
+    "statements": [
+      "The trees shown are stone pines. True or False?",
+      "The trees shown are cypress trees. True or False?",
+      "The trees shown are cedars of Lebanon. True or False?"
+    ],
+    "true_index": 2,
+    "confidence": "high",
+    "license": "CC-BY-SA-3.0"
+  },
+  {
+    "country": "Lebanon",
+    "category": "Geography, Buildings & Landmarks",
+    "subcategory": "Natural Landmarks",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/8/83/Pigeon_Rocks_of_Beirut%2C_Rock_of_Raouche%2C_Beirut%2C_Lebanon.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Pigeon_Rocks_of_Beirut,_Rock_of_Raouche,_Beirut,_Lebanon.jpg",
+    "visible_content": "The Pigeon Rocks (Rock of Raouche), two large natural rock formations in the Mediterranean off the Corniche in Beirut, Lebanon.",
+    "statements": [
+      "These natural sea rock formations are the Pigeon Rocks off Tyre, Lebanon. True or False?",
+      "These natural sea rock formations are the Pigeon Rocks off Beirut, Lebanon. True or False?",
+      "These natural sea rock formations are the Pigeon Rocks off Byblos, Lebanon. True or False?"
+    ],
+    "true_index": 1,
+    "confidence": "high",
+    "license": "CC-BY-4.0"
+  },
+  {
+    "country": "Lebanon",
+    "category": "Food & Cooking",
+    "subcategory": "Traditional Dishes",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/b/ba/Flickr_-_cyclonebill_-_Tabbouleh.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Flickr_-_cyclonebill_-_Tabbouleh.jpg",
+    "visible_content": "A serving of tabbouleh, the Levantine parsley-based chopped salad.",
+    "statements": [
+      "This salad's main ingredient is finely chopped parsley. True or False?",
+      "This salad's main ingredient is chickpeas. True or False?",
+      "This salad's main ingredient is eggplant. True or False?"
+    ],
+    "true_index": 0,
+    "confidence": "medium",
+    "license": "CC-BY-SA-2.0"
+  },
+  {
+    "country": "Syria",
+    "category": "Religion & Spirituality",
+    "subcategory": "Religious Landmarks",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/9/95/Damascus%2C_Syria%2C_The_Umayyad_Mosque%2C_The_Courtyard%2C_Islamic_Art.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Damascus,_Syria,_The_Umayyad_Mosque,_The_Courtyard,_Islamic_Art.jpg",
+    "visible_content": "The vast courtyard of the eighth-century Umayyad Mosque in Damascus, Syria, one of the oldest and largest mosques in the world.",
+    "statements": [
+      "This grand courtyard belongs to the Umayyad Mosque in Damascus. True or False?",
+      "This grand courtyard belongs to the Great Mosque of Aleppo. True or False?",
+      "This grand courtyard belongs to the Sayyida Ruqayya Mosque in Damascus. True or False?"
+    ],
+    "true_index": 0,
+    "confidence": "high",
+    "license": "CC-BY-4.0"
+  },
+  {
+    "country": "Syria",
+    "category": "Geography, Buildings & Landmarks",
+    "subcategory": "Famous Landmarks",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/5/54/Citadel_of_Aleppo.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Citadel_of_Aleppo.jpg",
+    "visible_content": "A frontal view of the Citadel of Aleppo, a large medieval fortified palace on a raised mound in Aleppo, Syria.",
+    "statements": [
+      "This hilltop medieval fortress is the Citadel of Damascus. True or False?",
+      "This hilltop medieval fortress is the Citadel of Homs. True or False?",
+      "This hilltop medieval fortress is the Citadel of Aleppo. True or False?"
+    ],
+    "true_index": 2,
+    "confidence": "high",
+    "license": "CC-BY-SA-3.0"
+  },
+  {
+    "country": "Syria",
+    "category": "Geography, Buildings & Landmarks",
+    "subcategory": "Archaeological Sites",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/6/65/Palmyra%2C_Syria%2C_Ruins.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Palmyra,_Syria,_Ruins.jpg",
+    "visible_content": "The main colonnaded avenue in the ancient city of Palmyra in the Syrian Desert.",
+    "statements": [
+      "This colonnaded avenue stands in the ancient city of Bosra. True or False?",
+      "This colonnaded avenue stands in the ancient city of Palmyra. True or False?",
+      "This colonnaded avenue stands in the ancient city of Apamea. True or False?"
+    ],
+    "true_index": 1,
+    "confidence": "high",
+    "license": "CC-BY-4.0"
+  },
+  {
+    "country": "Syria",
+    "category": "Geography, Buildings & Landmarks",
+    "subcategory": "Castles and Forts",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/8/8c/Krak_des_Chevaliers_Castle%2C_Syria.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Krak_des_Chevaliers_Castle,_Syria.jpg",
+    "visible_content": "Krak des Chevaliers, a Crusader fortress on a hill near Homs/Tartus in Syria, built for the Knights Hospitaller.",
+    "statements": [
+      "This medieval castle was built by the Crusader Knights Hospitaller. True or False?",
+      "This medieval castle was built by the Knights Templar. True or False?",
+      "This medieval castle was built by the Teutonic Knights. True or False?"
+    ],
+    "true_index": 0,
+    "confidence": "high",
+    "license": "CC-BY-4.0"
+  },
+  {
+    "country": "Syria",
+    "category": "Food & Cooking",
+    "subcategory": "Traditional Dishes",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/4/4d/Kibbeh_Safarjaliyeh.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Kibbeh_Safarjaliyeh.jpg",
+    "visible_content": "A bowl of kibbeh safarjaliyeh, a Levantine kibbeh dish made with beef.",
+    "statements": [
+      "This kibbeh dish is made with minced beef. True or False?",
+      "This kibbeh dish is made with minced lamb. True or False?",
+      "This kibbeh dish is made with minced chicken. True or False?"
+    ],
+    "true_index": 0,
+    "confidence": "medium",
+    "license": "CC-BY-SA-4.0"
+  }
+]

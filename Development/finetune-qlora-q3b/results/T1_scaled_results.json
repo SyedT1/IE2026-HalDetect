@@ -1,0 +1,25 @@
+{
+  "experiment": "T1 scaled QLoRA-SFT (Qwen2.5-VL-3B)",
+  "model": "Qwen/Qwen2.5-VL-3B-Instruct",
+  "n_train": 1500,
+  "n_dev": 500,
+  "max_pixels": 602112,
+  "epochs": 3,
+  "lr": 0.0002,
+  "lora": {
+    "r": 8,
+    "alpha": 16,
+    "targets": [
+      "q_proj",
+      "k_proj",
+      "v_proj",
+      "o_proj"
+    ]
+  },
+  "ci_finetuned": 0.062,
+  "acc_finetuned": 0.938,
+  "baseline_ci": 0.096,
+  "delta_ci": -0.034,
+  "epochs_completed": 1.6,
+  "note": "baseline from matched account-1 run (500 dev @768px); training stopped at 1.6/3 epochs (GPU limit)"
+}
