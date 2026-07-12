@@ -149,7 +149,11 @@ def report(csv_path: Path, gold: dict[str, int]) -> None:
     ref_name, ref_devtest, ref_dev = QWEN_REF.get(folder, ("Qwen", float("nan"), None))
     m = score(csv_path, gold)
 
-    print(f"\n{csv_path.relative_to(HERE)}")
+    try:
+        label = csv_path.resolve().relative_to(HERE.resolve())
+    except ValueError:
+        label = csv_path            # scoring something outside the suite; show it as given
+    print(f"\n{label}")
     if m is None:
         h = health(csv_path)
         joint = folder != "baseline"
