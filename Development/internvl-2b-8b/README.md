@@ -52,11 +52,34 @@ parser. That is what makes the CoT ablation an ablation.
 
 ## Results
 
-Filled in as runs land. Qwen numbers are the devtest figures from the top-level README.
+Scored on **dev** (500 labelled items) by `score_local.py`, so the Qwen column must also be
+dev. Most published Qwen numbers are devtest, and the splits do not agree — Run 4 is 0.042
+on dev but 0.050 on devtest. Comparing across them would shift a result by ~0.008, which is
+larger than most of the CoT effects being measured. Where a Qwen dev number is not known,
+the cell says so rather than silently substituting the devtest one.
 
-| Run | InternVL CI ↓ | Qwen CI ↓ | Δ |
-|---|:---:|:---:|:---:|
-| _pending_ | | | |
+| Run | Model | InternVL CI ↓ | Qwen CI ↓ (dev) | Δ |
+|---|---|:---:|:---:|:---:|
+| Run 4 — joint, answer-first | InternVL2-8B | **0.078** | 0.042 | +0.036 ✗ |
+| Run 1 — baseline, per-statement | InternVL2-2B | _devtest, unscorable_ | 0.257 (devtest) | — |
+| Run 3 — joint, reason-first | InternVL2-2B | _pending_ | | |
+| Run 5 — joint, answer-first | InternVL2-2B | _pending_ | | |
+| Run 2 — joint, reason-first | InternVL2-8B | _pending_ | | |
+| CoT1–CoT6 | InternVL2-8B | _pending_ | | |
+
+**Run 4 (the headline comparison so far).** InternVL2-8B reaches CI 0.078 against
+Qwen2.5-VL-7B's 0.042 on the same split, same prompt, same parser, same decoding — roughly
+**1.9× the error rate**. The run itself is healthy, so this is a capability gap and not a
+porting artefact: the `Answer: X` format was respected on 100% of items (the joint parse
+never once fell back to per-statement judging), and CFHR is 0.000, meaning the model never
+marked a distractor True after correctly identifying the grounded statement. It simply
+picks the wrong statement more often.
+
+**Run 1** was executed against `devtest` before the notebooks were switched to `dev`, so it
+carries no score — devtest is blind. Its predictions are still informative, though: only
+**62.6%** of items receive exactly one `true`, where gold always has exactly one. That caps
+combined accuracy at 0.626 and puts CI ≥ 0.374, far short of Qwen Run 1's 0.257. Re-run it
+on `dev` if an exact number is wanted.
 
 ---
 
