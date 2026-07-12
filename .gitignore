@@ -1,3 +1,9 @@
 __pycache__/
 *.pyc
 .venv/
+
+# Codabench submission zips are results, not build artifacts -- they are the only thing a
+# teammate can actually submit, and every Qwen run folder tracks one. A local `*.zip` rule
+# in .git/info/exclude was silently dropping them. .gitignore takes precedence over
+# info/exclude, so this negation keeps them tracked.
+!**/prediction_en.zip
