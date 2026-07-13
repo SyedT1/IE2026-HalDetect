@@ -36,14 +36,16 @@ so there is no point running it until run 5 has landed.
 | 3 | [answer-first-joint-i2b/answer-first-internvl2b.ipynb](answer-first-joint-i2b/answer-first-internvl2b.ipynb) | 2B | joint, answer-first | Run 5 | 0.082 | 500 | 20 min |
 | 4 | [joint-3-i8b/joint-3-stat-internvl8b.ipynb](joint-3-i8b/joint-3-stat-internvl8b.ipynb) | 8B | joint, reason-first | Run 2 | 0.092 | 500 | 40 min |
 | 5 | [answer-first-joint-i8b/answer-first-internvl8b.ipynb](answer-first-joint-i8b/answer-first-internvl8b.ipynb) | 8B | joint, answer-first | Run 4 | 0.050 | 500 | 40 min |
-| 6 | [all-COT-variations-i8b/evidence-first/cot-evidence-first.ipynb](all-COT-variations-i8b/evidence-first/cot-evidence-first.ipynb) | 8B | CoT: describe image first | CoT1 | 0.044 | 500 | 45 min |
-| 7 | [all-COT-variations-i8b/elimination/cot-elimination.ipynb](all-COT-variations-i8b/elimination/cot-elimination.ipynb) | 8B | CoT: rule out two, confirm one | CoT2 | 0.056 | 500 | 45 min |
-| 8 | [all-COT-variations-i8b/confidence-ranked/cot-confidence-ranked.ipynb](all-COT-variations-i8b/confidence-ranked/cot-confidence-ranked.ipynb) | 8B | CoT: rank all three | CoT3 | 0.046 | 500 | 45 min |
-| 9 | [all-COT-variations-i8b/devils-advocate/cot-devils-advocate.ipynb](all-COT-variations-i8b/devils-advocate/cot-devils-advocate.ipynb) | 8B | CoT: steelman then rebut | CoT4 | 0.048 | 500 | 45 min |
-| 10 | [all-COT-variations-i8b/attribute-checklist/cot-attribute-checklist.ipynb](all-COT-variations-i8b/attribute-checklist/cot-attribute-checklist.ipynb) | 8B | CoT: colour/form/context | CoT5 | **0.042** | 500 | 45 min |
-| 11 | [all-COT-variations-i8b/socratic/cot-socratic.ipynb](all-COT-variations-i8b/socratic/cot-socratic.ipynb) | 8B | CoT: sub-questions | CoT6 | 0.046 | 500 | 45 min |
+| 6 | [all-COT-variations-i8b/evidence-first/cot-evidence-first.ipynb](all-COT-variations-i8b/evidence-first/cot-evidence-first.ipynb) | 8B | CoT: describe image first | CoT1 | 0.044 | 500 | ~1 h |
+| 7 | [all-COT-variations-i8b/elimination/cot-elimination.ipynb](all-COT-variations-i8b/elimination/cot-elimination.ipynb) | 8B | CoT: rule out two, confirm one | CoT2 | 0.056 | 500 | ~1 h |
+| 8 | [all-COT-variations-i8b/confidence-ranked/cot-confidence-ranked.ipynb](all-COT-variations-i8b/confidence-ranked/cot-confidence-ranked.ipynb) | 8B | CoT: rank all three | CoT3 | 0.046 | 500 | ~1 h |
+| 9 | [all-COT-variations-i8b/devils-advocate/cot-devils-advocate.ipynb](all-COT-variations-i8b/devils-advocate/cot-devils-advocate.ipynb) | 8B | CoT: steelman then rebut | CoT4 | 0.048 | 500 | ~1 h |
+| 10 | [all-COT-variations-i8b/attribute-checklist/cot-attribute-checklist.ipynb](all-COT-variations-i8b/attribute-checklist/cot-attribute-checklist.ipynb) | 8B | CoT: colour/form/context | CoT5 | **0.042** | 500 | ~1 h |
+| 11 | [all-COT-variations-i8b/socratic/cot-socratic.ipynb](all-COT-variations-i8b/socratic/cot-socratic.ipynb) | 8B | CoT: sub-questions | CoT6 | 0.046 | 500 | ~1 h |
 
-Total ≈ 7 GPU-hours per split, against a Kaggle quota of 30 GPU-hours/week. Run 1 is the
+Measured wall-clock, not estimates: ~10 GPU-hours for the suite, against a Kaggle quota of
+30 GPU-hours/week. 4-bit dequantisation and eager attention (the T4 is Turing, so no
+FlashAttention-2) dominate the cost, not the model size. Run 1 is the
 expensive one — it judges each statement separately, so it costs 3× the joint runs for what
 Qwen showed is by far the worst method. It exists only to reproduce the Run 1 → Run 3 delta.
 
@@ -52,34 +54,68 @@ parser. That is what makes the CoT ablation an ablation.
 
 ## Results
 
-Scored on **dev** (500 labelled items) by `score_local.py`, so the Qwen column must also be
-dev. Most published Qwen numbers are devtest, and the splits do not agree — Run 4 is 0.042
-on dev but 0.050 on devtest. Comparing across them would shift a result by ~0.008, which is
-larger than most of the CoT effects being measured. Where a Qwen dev number is not known,
-the cell says so rather than silently substituting the devtest one.
+All eleven runs are complete, on **devtest**, matching the split every published Qwen number
+uses. devtest is blind, so **CI comes from Codabench** ([competition 17051](https://www.codabench.org/competitions/17051/)) —
+submit each run's `prediction_en.zip` and fill the column in.
 
-| Run | Model | InternVL CI ↓ | Qwen CI ↓ (dev) | Δ |
-|---|---|:---:|:---:|:---:|
-| Run 4 — joint, answer-first | InternVL2-8B | **0.078** | 0.042 | +0.036 ✗ |
-| Run 1 — baseline, per-statement | InternVL2-2B | _devtest, unscorable_ | 0.257 (devtest) | — |
-| Run 3 — joint, reason-first | InternVL2-2B | _pending_ | | |
-| Run 5 — joint, answer-first | InternVL2-2B | _pending_ | | |
-| Run 2 — joint, reason-first | InternVL2-8B | _pending_ | | |
-| CoT1–CoT6 | InternVL2-8B | _pending_ | | |
+The `health` column is computed offline by `score_local.py` and needs no answer key. Gold
+always marks exactly one statement True, so a *joint* run must emit exactly one True per item
+by construction; anything less means the `Answer: X` parse fell back to per-statement judging
+and the run is measuring the wrong thing. **All ten joint runs are at 100%** — the port is
+sound end to end, and no result here is a parsing artefact.
 
-**Run 4 (the headline comparison so far).** InternVL2-8B reaches CI 0.078 against
-Qwen2.5-VL-7B's 0.042 on the same split, same prompt, same parser, same decoding — roughly
-**1.9× the error rate**. The run itself is healthy, so this is a capability gap and not a
-porting artefact: the `Answer: X` format was respected on 100% of items (the joint parse
-never once fell back to per-statement judging), and CFHR is 0.000, meaning the model never
-marked a distractor True after correctly identifying the grounded statement. It simply
-picks the wrong statement more often.
+| Run | Model | Method | InternVL CI ↓ | Qwen CI ↓ | health |
+|---|---|---|:---:|:---:|:---:|
+| Run 1 | InternVL2-2B | baseline, per-statement | _Codabench_ (**≥ 0.374**) | 0.257 | 62.6% ⚠ |
+| Run 3 | InternVL2-2B | joint, reason-first | _Codabench_ | 0.142 | 100% |
+| Run 5 | InternVL2-2B | joint, answer-first | _Codabench_ | 0.082 | 100% |
+| Run 2 | InternVL2-8B | joint, reason-first | _Codabench_ | 0.092 | 100% |
+| Run 4 | InternVL2-8B | joint, answer-first | _Codabench_ | 0.050 | 100% |
+| CoT1 | InternVL2-8B | evidence-first | _Codabench_ | 0.044 | 100% |
+| CoT2 | InternVL2-8B | elimination | _Codabench_ | 0.056 | 100% |
+| CoT3 | InternVL2-8B | confidence-ranked | _Codabench_ | 0.046 | 100% |
+| CoT4 | InternVL2-8B | devil's advocate | _Codabench_ | 0.048 | 100% |
+| CoT5 | InternVL2-8B | attribute checklist | _Codabench_ | **0.042** | 100% |
+| CoT6 | InternVL2-8B | socratic | _Codabench_ | 0.046 | 100% |
 
-**Run 1** was executed against `devtest` before the notebooks were switched to `dev`, so it
-carries no score — devtest is blind. Its predictions are still informative, though: only
-**62.6%** of items receive exactly one `true`, where gold always has exactly one. That caps
-combined accuracy at 0.626 and puts CI ≥ 0.374, far short of Qwen Run 1's 0.257. Re-run it
-on `dev` if an exact number is wanted.
+### What we already know without Codabench
+
+**Run 4 was additionally run on `dev`** (artifacts kept as `*_DEV`, the only InternVL result
+scorable offline). It is the answer to the paper's central question:
+
+| | InternVL2-8B | Qwen2.5-VL-7B |
+|---|:---:|:---:|
+| CI (dev) | **0.078** | 0.042 |
+| Combined accuracy | 0.922 | 0.958 |
+| CFHR | 0.000 | 0.000 |
+| exactly one True per item | 100% | 100% |
+
+**InternVL2-8B runs at roughly 1.9x Qwen2.5-VL-7B's error rate** under an identical prompt,
+parser, decoding setup and split. The run is healthy — the `Answer: X` format held on every
+item and CFHR is 0, so it never marks a distractor True after finding the grounded statement.
+It simply picks the wrong statement more often. This is a capability gap, not a porting
+artefact.
+
+**Run 1 has a floor even though it is blind.** Only 62.6% of its items receive exactly one
+`true`, where gold always has exactly one — so combined accuracy is capped at 0.626 and
+**CI >= 0.374** whatever Codabench returns, against Qwen Run 1's 0.257. The per-statement
+baseline has no structural guarantee of a single True (unlike the joint runs), so this is a
+genuine weakness of InternVL2-2B rather than a broken parse.
+
+### Known caveat: Run 3 and Run 5 precision
+
+Both ran at **fp16**; the corresponding Qwen 3B joint runs used **4-bit NF4**. The notebooks
+are now fixed to 4-bit, but these two results predate the fix.
+
+The error favours InternVL — higher precision is an advantage Qwen did not get — so:
+
+- if InternVL **loses** on Runs 3 and 5 (expected, given the 8B result), the finding stands and
+  a footnote suffices: *"InternVL2-2B joint runs used fp16 vs Qwen's 4-bit NF4; the precision
+  difference favours InternVL, so the reported gap is a lower bound."*
+- if InternVL **wins or ties**, the result is not usable and both must be re-run (~20 min each).
+
+Decide once the Codabench numbers arrive. The Run 3 -> Run 5 delta (reason-first vs
+answer-first) is unaffected either way, since both ran at fp16.
 
 ---
 
