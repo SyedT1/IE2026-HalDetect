@@ -64,19 +64,21 @@ by construction; anything less means the `Answer: X` parse fell back to per-stat
 and the run is measuring the wrong thing. **All ten joint runs are at 100%** — the port is
 sound end to end, and no result here is a parsing artefact.
 
-| Run | Model | Method | InternVL CI ↓ | Qwen CI ↓ | health |
-|---|---|---|:---:|:---:|:---:|
-| Run 1 | InternVL2-2B | baseline, per-statement | _Codabench_ (**≥ 0.374**) | 0.257 | 62.6% ⚠ |
-| Run 3 | InternVL2-2B | joint, reason-first | _Codabench_ | 0.142 | 100% |
-| Run 5 | InternVL2-2B | joint, answer-first | _Codabench_ | 0.082 | 100% |
-| Run 2 | InternVL2-8B | joint, reason-first | _Codabench_ | 0.092 | 100% |
-| Run 4 | InternVL2-8B | joint, answer-first | _Codabench_ | 0.050 | 100% |
-| CoT1 | InternVL2-8B | evidence-first | _Codabench_ | 0.044 | 100% |
-| CoT2 | InternVL2-8B | elimination | _Codabench_ | 0.056 | 100% |
-| CoT3 | InternVL2-8B | confidence-ranked | _Codabench_ | 0.046 | 100% |
-| CoT4 | InternVL2-8B | devil's advocate | _Codabench_ | 0.048 | 100% |
-| CoT5 | InternVL2-8B | attribute checklist | _Codabench_ | **0.042** | 100% |
-| CoT6 | InternVL2-8B | socratic | _Codabench_ | 0.046 | 100% |
+| Run | Model | Method | InternVL CI ↓ | Comb ↑ | CFHR ↓ | Q+ ↑ | Q− ↑ | Qwen CI ↓ | health |
+|---|---|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| Run 1 | InternVL2-2B | baseline, per-statement | _Codabench_ (**≥ 0.374**) | — | — | — | — | 0.257 | 62.6% ⚠ |
+| Run 3 | InternVL2-2B | joint, reason-first | **0.298** | 0.702 | 0.000 | 0.702 | 0.851 | 0.142 | 100% |
+| Run 5 | InternVL2-2B | joint, answer-first | **0.232** | 0.768 | 0.000 | 0.768 | 0.884 | 0.082 | 100% |
+| Run 2 | InternVL2-8B | joint, reason-first | **0.098** | 0.902 | 0.000 | 0.902 | 0.951 | 0.092 | 100% |
+| Run 4 | InternVL2-8B | joint, answer-first | **0.084** | 0.916 | 0.000 | 0.916 | 0.958 | 0.050 | 100% |
+| CoT1 | InternVL2-8B | evidence-first | _Codabench_ | — | — | — | — | 0.044 | 100% |
+| CoT2 | InternVL2-8B | elimination | _Codabench_ | — | — | — | — | 0.056 | 100% |
+| CoT3 | InternVL2-8B | confidence-ranked | _Codabench_ | — | — | — | — | 0.046 | 100% |
+| CoT4 | InternVL2-8B | devil's advocate | _Codabench_ | — | — | — | — | 0.048 | 100% |
+| CoT5 | InternVL2-8B | attribute checklist | _Codabench_ | — | — | — | — | **0.042** | 100% |
+| CoT6 | InternVL2-8B | socratic | _Codabench_ | — | — | — | — | 0.046 | 100% |
+
+Codabench scores for Runs 2–5 come from `logs.txt` (duration −1.0 on all four submissions).
 
 ### What we already know without Codabench
 
@@ -102,20 +104,32 @@ artefact.
 baseline has no structural guarantee of a single True (unlike the joint runs), so this is a
 genuine weakness of InternVL2-2B rather than a broken parse.
 
+### Codabench summary (Runs 2–5)
+
+Joint-prompt InternVL is **strictly worse than the matched Qwen cell** on every scored run:
+
+| Matched pair | InternVL CI | Qwen CI | Ratio |
+|---|:---:|:---:|:---:|
+| Run 3 (small, reason-first) | 0.298 | 0.142 | 2.10× |
+| Run 5 (small, answer-first) | 0.232 | 0.082 | 2.83× |
+| Run 2 (large, reason-first) | 0.098 | 0.092 | 1.07× |
+| Run 4 (large, answer-first) | **0.084** | 0.050 | 1.68× |
+
+Within InternVL, answer-first still helps (2B: 0.298 → 0.232, −22.1%; 8B: 0.098 → 0.084,
+−14.3%) and scale 2B → 8B is the dominant lever (answer-first: −63.8%). Best InternVL
+zero-shot so far: **Run 4, CI 0.084**. CoT1–CoT6 remain unscored on Codabench.
+
 ### Known caveat: Run 3 and Run 5 precision
 
 Both ran at **fp16**; the corresponding Qwen 3B joint runs used **4-bit NF4**. The notebooks
 are now fixed to 4-bit, but these two results predate the fix.
 
-The error favours InternVL — higher precision is an advantage Qwen did not get — so:
-
-- if InternVL **loses** on Runs 3 and 5 (expected, given the 8B result), the finding stands and
-  a footnote suffices: *"InternVL2-2B joint runs used fp16 vs Qwen's 4-bit NF4; the precision
-  difference favours InternVL, so the reported gap is a lower bound."*
-- if InternVL **wins or ties**, the result is not usable and both must be re-run (~20 min each).
-
-Decide once the Codabench numbers arrive. The Run 3 -> Run 5 delta (reason-first vs
-answer-first) is unaffected either way, since both ran at fp16.
+The error favours InternVL — higher precision is an advantage Qwen did not get — so the
+reported InternVL gap on Runs 3 and 5 is a **lower bound**: InternVL still loses by a wide
+margin (2.10× / 2.83× Qwen error) despite the precision advantage. A footnote is enough:
+*"InternVL2-2B joint runs used fp16 vs Qwen's 4-bit NF4; the precision difference favours
+InternVL, so the reported gap is a lower bound."* The Run 3 → Run 5 delta (reason-first vs
+answer-first) is unaffected, since both ran at fp16.
 
 ---
 

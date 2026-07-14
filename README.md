@@ -13,9 +13,13 @@ and which two are **False** (hallucinated). Exactly one statement per image is c
 
 | Run | Method | CI ↓ | Combined Acc ↑ | CFHR ↓ | Q+ Acc ↑ | Q− Acc ↑ |
 |-----|--------|:---:|:---:|:---:|:---:|:---:|
+| Intern-R3 | InternVL2-2B, joint 3-statement prompt, reason→answer | 0.298 | 0.702 | 0.000 | 0.702 | 0.851 |
 | Run 1 (baseline) | Qwen2.5-VL-3B, per-statement, greedy, max_new_tokens=10 | 0.257 | 0.740 | — | 0.912 | 0.888 |
+| Intern-R5 | InternVL2-2B, joint 3-statement prompt, answer→reason | 0.232 | 0.768 | 0.000 | 0.768 | 0.884 |
 | Run 3 | Qwen2.5-VL-3B, joint 3-statement prompt, reason→answer | 0.142 | 0.858 | 0.000 | 0.858 | 0.929 |
+| Intern-R2 | InternVL2-8B, joint 3-statement prompt, reason→answer | 0.098 | 0.902 | 0.000 | 0.902 | 0.951 |
 | Run 2 | Qwen2.5-VL-7B, joint 3-statement prompt, reason→answer | 0.092 | 0.908 | 0.000 | 0.908 | 0.954 |
+| Intern-R4 | InternVL2-8B, joint 3-statement prompt, answer→reason | 0.084 | 0.916 | 0.000 | 0.916 | 0.958 |
 | Run 5 | Qwen2.5-VL-3B, joint 3-statement prompt, answer→reason | 0.082 | 0.918 | 0.000 | 0.918 | 0.959 |
 | CoT2 | Run 4 + elimination-based CoT | 0.056 | 0.944 | 0.000 | 0.944 | 0.972 |
 | Res1280 | Run 4 + MAX_PIXELS=1280×28×28 | 0.054 | 0.946 | 0.000 | 0.946 | 0.973 |
@@ -100,6 +104,12 @@ The gains decompose cleanly across orthogonal factors:
 | QLoRA fine-tuning at 7B scale (frozen vision encoder) | CoT5 → RunFT | −23.8% |
 | **Training-set size 2,000 → 2,300 items (7B QLoRA, same recipe)** | **RunFT → RunFT (2.3k)** | **−12.5%** |
 | Training-set size 2,300 → 2,600 items (7B QLoRA, same recipe) | RunFT (2.3k) → RunFT (2.6k) | **+21.4%** ✗ |
+| Answer-first vs reason-first (InternVL2-2B) | Intern-R3 → Intern-R5 | −22.1% |
+| Answer-first vs reason-first (InternVL2-8B) | Intern-R2 → Intern-R4 | −14.3% |
+| Model scale InternVL2-2B → 8B (answer-first) | Intern-R5 → Intern-R4 | −63.8% |
+| Model scale InternVL2-2B → 8B (reason-first) | Intern-R3 → Intern-R2 | −67.1% |
+| Qwen vs InternVL, large answer-first | Intern-R4 → Run 4 | −40.5% (Qwen lower CI) |
+| Qwen vs InternVL, small answer-first | Intern-R5 → Run 5 | −64.7% (Qwen lower CI) |
 
 > **Key finding (Run 5):** answer-first prompting on the 3B model (CI 0.082) outperforms
 > reason-first on the 7B model (CI 0.092), confirming that prompt order is a stronger
@@ -108,6 +118,16 @@ The gains decompose cleanly across orthogonal factors:
 > **Key finding (Run ADE):** a Latin square permutation ensemble over three statement
 > orderings eliminates the dev/devtest generalisation gap (both splits reach CI 0.042),
 > suggesting the remaining gap in Run 4 was partly attributable to position bias.
+
+> **Key finding (InternVL cross-family):** re-running the joint-prompt matrix on
+> InternVL2-2B / InternVL2-8B (contemporaries of Qwen2.5-VL-3B / 7B) shows the same
+> qualitative levers transfer, but absolute error is higher on every matched cell.
+> Answer-first still beats reason-first at both scales (2B: 0.298 → 0.232, −22.1%;
+> 8B: 0.098 → 0.084, −14.3%), and scaling 2B → 8B remains the dominant gain
+> (answer-first: 0.232 → 0.084, −63.8%). Best InternVL zero-shot so far is
+> Intern-R4 (8B answer-first, CI **0.084**) — roughly 1.7× the error of Qwen Run 4
+> (0.050) under the same prompt and split. The gap is a capability difference, not a
+> porting artefact: CFHR is 0.000 on all four InternVL runs, so format compliance holds.
 
 ---
 
@@ -613,6 +633,54 @@ full-data training recovers (or worsens further).
 
 ---
 
+### InternVL2 — Cross-Family Zero-Shot Replication
+
+**Motivation.** The Qwen joint-prompt findings could be family-specific. InternVL2-2B and
+InternVL2-8B are contemporaries of Qwen2.5-VL-3B and -7B, so re-running the same prompts
+isolates model family rather than training-recency. Fine-tuning, hyper-parameter search,
+and permutation ensembling are out of scope for this track — zero-shot / prompting only.
+
+**Models:** `OpenGVLab/InternVL2-2B`, `OpenGVLab/InternVL2-8B` (8B under 4-bit NF4).
+**Prompts / parser:** identical to the matched Qwen runs (character-for-character joint
+prompt and official `evaluate_tf` parser).
+**Split:** `devtest` (Codabench 17051). Duration field was −1.0 on all four submissions.
+
+| InternVL run | Matches Qwen | Model | Prompt order | CI ↓ | Comb ↑ | CFHR ↓ | Q+ ↑ | Q− ↑ |
+|---|---|---|---|:---:|:---:|:---:|:---:|:---:|
+| Intern-R3 | Run 3 | InternVL2-2B | reason→answer | 0.298 | 0.702 | 0.000 | 0.702 | 0.851 |
+| Intern-R5 | Run 5 | InternVL2-2B | answer→reason | 0.232 | 0.768 | 0.000 | 0.768 | 0.884 |
+| Intern-R2 | Run 2 | InternVL2-8B | reason→answer | 0.098 | 0.902 | 0.000 | 0.902 | 0.951 |
+| **Intern-R4** | **Run 4** | **InternVL2-8B** | **answer→reason** | **0.084** | **0.916** | **0.000** | **0.916** | **0.958** |
+
+**Matched Qwen vs InternVL (same prompt, same split):**
+
+| Matched pair | Qwen CI | InternVL CI | InternVL / Qwen error ratio |
+|---|:---:|:---:|:---:|
+| Run 3 vs Intern-R3 (small, reason-first) | 0.142 | 0.298 | 2.10× |
+| Run 5 vs Intern-R5 (small, answer-first) | 0.082 | 0.232 | 2.83× |
+| Run 2 vs Intern-R2 (large, reason-first) | 0.092 | 0.098 | 1.07× |
+| Run 4 vs Intern-R4 (large, answer-first) | 0.050 | 0.084 | 1.68× |
+
+**Within-family InternVL deltas:**
+
+$$\text{CI(Intern-R3)} - \text{CI(Intern-R5)} = 0.298 - 0.232 = 0.066 \quad (-22.1\% \text{ relative, answer-first @ 2B})$$
+
+$$\text{CI(Intern-R2)} - \text{CI(Intern-R4)} = 0.098 - 0.084 = 0.014 \quad (-14.3\% \text{ relative, answer-first @ 8B})$$
+
+$$\text{CI(Intern-R5)} - \text{CI(Intern-R4)} = 0.232 - 0.084 = 0.148 \quad (-63.8\% \text{ relative, 2B → 8B answer-first})$$
+
+**Takeaway:** answer-first and model scale transfer across families, but both levers are
+weaker (answer-first) or differently proportioned (scale) than on Qwen, and InternVL never
+closes the absolute gap to its Qwen match. The large-model reason-first cell is almost tied
+(Intern-R2 0.098 vs Run 2 0.092); answer-first is where Qwen pulls away most (0.050 vs
+0.084). InternVL CoT ablations (CoT1–CoT6 on 8B) are generated under
+`Development/internvl-2b-8b/all-COT-variations-i8b/` but are not yet scored on Codabench.
+
+**Notebooks:** `Development/internvl-2b-8b/` — see that folder's README for Kaggle/T4
+quirks (`use_flash_attn=False`, `transformers==4.49.0`, `MAX_TILES` as the resolution knob).
+
+---
+
 ## System Comparison
 
 | | R1 | R3 | R2 | R5 | CoT2 | Res1280 | R4 | **FT-3B** | CoT4 | CoT3 | CoT6 | CoT1 | **FT-3B (3k)** | CoT5 | ADE | **FT (2.6k)** | **FT** | **FT (2.3k)** |
@@ -630,6 +698,20 @@ full-data training recovers (or worsens further).
 | CFHR ↓ | — | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | **0.000** | 0.000 | 0.000 | 0.000 | 0.000 | **0.000** | 0.000 | 0.000 | **0.000** | **0.000** | **0.000** |
 | Q+ ↑ | 0.912 | 0.858 | 0.908 | 0.918 | 0.944 | 0.946 | 0.950 | **0.950** | 0.952 | 0.954 | 0.954 | 0.956 | **0.956** | 0.958 | 0.958 | **0.966** | **0.968** | **0.972** |
 | Q− ↑ | 0.888 | 0.929 | 0.954 | 0.959 | 0.972 | 0.973 | 0.975 | **0.975** | 0.976 | 0.977 | 0.977 | 0.978 | **0.978** | 0.979 | 0.979 | **0.983** | **0.984** | **0.986** |
+
+### InternVL2 zero-shot matrix (devtest)
+
+| | Intern-R3 | Intern-R5 | Intern-R2 | **Intern-R4** | Qwen R3 | Qwen R5 | Qwen R2 | Qwen R4 |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| Model | 2B | 2B | 8B | **8B** | 3B | 3B | 7B | 7B |
+| Joint | ✅ | ✅ | ✅ | **✅** | ✅ | ✅ | ✅ | ✅ |
+| Ans first | ❌ | ✅ | ❌ | **✅** | ❌ | ✅ | ❌ | ✅ |
+| Fine-tuned | ❌ | ❌ | ❌ | **❌** | ❌ | ❌ | ❌ | ❌ |
+| CI ↓ | 0.298 | 0.232 | 0.098 | **0.084** | 0.142 | 0.082 | 0.092 | 0.050 |
+| Comb ↑ | 0.702 | 0.768 | 0.902 | **0.916** | 0.858 | 0.918 | 0.908 | 0.950 |
+| CFHR ↓ | 0.000 | 0.000 | 0.000 | **0.000** | 0.000 | 0.000 | 0.000 | 0.000 |
+| Q+ ↑ | 0.702 | 0.768 | 0.902 | **0.916** | 0.858 | 0.918 | 0.908 | 0.950 |
+| Q− ↑ | 0.851 | 0.884 | 0.951 | **0.958** | 0.929 | 0.959 | 0.954 | 0.975 |
 
 ---
 
@@ -674,26 +756,22 @@ Kaggle T4 sessions via checkpointing (`device_map='auto'` shards the model over 
 ```
 IE2026-HalDetect/
 ├── README.md
+├── logs.txt                        # Codabench score scratchpad (source for new results)
 └── Development/
-    ├── baseline/                   # Run 1: per-statement baseline (Qwen2.5-VL-3B)
-    ├── joint-3-q7b/                # Run 2: joint prompt, reason→answer (Qwen2.5-VL-7B)
-    ├── answer-first-q3b/           # Run 5: joint prompt, answer→reason (Qwen2.5-VL-3B)
-    ├── answer-first-q7b/           # Run 4: joint prompt, answer→reason (Qwen2.5-VL-7B)
-    ├── cot-variants/               # CoT1–CoT6: structured CoT ablations
-    ├── ensemble-ADE/               # Run ADE: Latin square permutation ensemble + majority vote
-    ├── finetune/                   # RunFT: 7B QLoRA training + inference notebooks
-    └── finetune-qlora-q3b/         # 3B QLoRA-SFT + DPO track (dev split); builders,
-                                    #   Kaggle notebooks, results/ (preds, metrics, adapters)
-    └── finetune/                   # RunFT / RunFT-3B: QLoRA training + inference notebooks
-        └── step-3-qlora-q3b-3k-inference.ipynb   # RunFT-3B (3k): 3B adapter trained on
-                                                    # the full 3,000-item train set,
-                                                    # devtest inference, CI 0.044
+    ├── qwen2p5-3b-7b/              # Main Qwen2.5-VL track (baseline, joint, CoT, QLoRA, …)
+    ├── internvl-2b-8b/             # InternVL2 cross-family zero-shot replication
+    │   ├── joint-3-i2b/            # Intern-R3: 2B joint reason→answer (CI 0.298)
+    │   ├── answer-first-joint-i2b/ # Intern-R5: 2B joint answer→reason (CI 0.232)
+    │   ├── joint-3-i8b/            # Intern-R2: 8B joint reason→answer (CI 0.098)
+    │   ├── answer-first-joint-i8b/ # Intern-R4: 8B joint answer→reason (CI 0.084)
+    │   └── all-COT-variations-i8b/ # CoT1–CoT6 on InternVL2-8B (awaiting Codabench)
+    ├── finetune-qlora-q3b/         # 3B QLoRA-SFT + DPO track (dev split)
+    └── permutation-ensembling-q7b/ # ADE majority-vote combiner artifacts
 ```
 
-Run 3 shares the notebook from `joint-3-q7b/` with `VLM_MODEL` switched to the 3B variant.
-Run 5 shares the notebook from `answer-first-q7b/` with `VLM_MODEL` switched to the 3B variant.
-RunFT-3B shares the training/inference notebooks from `finetune/` with `VLM_MODEL` switched
-to `Qwen/Qwen2.5-VL-3B-Instruct`.
+Qwen Run 3 / Run 5 notebooks live under `qwen2p5-3b-7b/` with `VLM_MODEL` switched to the
+3B or 7B variant as needed. InternVL notebooks are self-contained ports of the same
+prompts under `internvl-2b-8b/` (see that folder's README).
 
 ---
 
@@ -740,6 +818,10 @@ ds = load_dataset("QCRI/AynVQA-ArabicNLP26", "task1b_en", split="devtest")
 | RunFT (2.3k) infer | same as RunFT infer (`finetune/qlora-infer-final.ipynb`), `SPLIT='devtest'` | T4 | not recorded (CI 0.028 via Codabench, current best) |
 | RunFT (2.6k) train | `Development/qwen2p5-3b-7b/qwen-q7b-2p6k-image/resume-from-checkpoint-300.ipynb` (`TRAIN_SUBSAMPLE_N=2600`, `MAX_STEPS=510`) | T4×2 | not recorded |
 | RunFT (2.6k) infer | `Development/qwen2p5-3b-7b/qwen-q7b-2p6k-image/inference-qlora-2p6k-q7b-v1.ipynb`, `SPLIT='devtest'` | T4 | not recorded (CI 0.034 via Codabench; non-monotonic vs 2.3k) |
+| Intern-R3 | `Development/internvl-2b-8b/joint-3-i2b/joint-3-stat-internvl2b.ipynb` | T4 | not recorded (CI 0.298 via Codabench) |
+| Intern-R5 | `Development/internvl-2b-8b/answer-first-joint-i2b/answer-first-internvl2b.ipynb` | T4 | not recorded (CI 0.232 via Codabench) |
+| Intern-R2 | `Development/internvl-2b-8b/joint-3-i8b/joint-3-stat-internvl8b.ipynb` | T4 | not recorded (CI 0.098 via Codabench) |
+| Intern-R4 | `Development/internvl-2b-8b/answer-first-joint-i8b/answer-first-internvl8b.ipynb` | T4 | not recorded (CI 0.084 via Codabench; best InternVL zero-shot) |
 
 1. Upload notebook to Kaggle → enable T4 GPU → add HF_TOKEN secret
 2. Set `SPLIT = 'dev'` to score locally; `SPLIT = 'devtest'` for Codabench submission
