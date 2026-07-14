@@ -75,10 +75,11 @@ sound end to end, and no result here is a parsing artefact.
 | CoT2 | InternVL2-8B | elimination | _Codabench_ | — | — | — | — | 0.056 | 100% |
 | CoT3 | InternVL2-8B | confidence-ranked | _Codabench_ | — | — | — | — | 0.046 | 100% |
 | CoT4 | InternVL2-8B | devil's advocate | _Codabench_ | — | — | — | — | 0.048 | 100% |
-| CoT5 | InternVL2-8B | attribute checklist | _Codabench_ | — | — | — | — | **0.042** | 100% |
+| CoT5 | InternVL2-8B | **Run 4 + attribute checklist CoT** | **0.084** | 0.916 | 0.000 | 0.916 | 0.958 | **0.042** | 100% |
 | CoT6 | InternVL2-8B | socratic | _Codabench_ | — | — | — | — | 0.046 | 100% |
 
-Codabench scores for Runs 2–5 come from `logs.txt` (duration −1.0 on all four submissions).
+Codabench scores for Runs 2–5 and CoT5 come from `logs.txt` (duration −1.0 on scored
+submissions).
 
 ### What we already know without Codabench
 
@@ -104,7 +105,7 @@ artefact.
 baseline has no structural guarantee of a single True (unlike the joint runs), so this is a
 genuine weakness of InternVL2-2B rather than a broken parse.
 
-### Codabench summary (Runs 2–5)
+### Codabench summary (Runs 2–5 + CoT5)
 
 Joint-prompt InternVL is **strictly worse than the matched Qwen cell** on every scored run:
 
@@ -114,10 +115,14 @@ Joint-prompt InternVL is **strictly worse than the matched Qwen cell** on every 
 | Run 5 (small, answer-first) | 0.232 | 0.082 | 2.83× |
 | Run 2 (large, reason-first) | 0.098 | 0.092 | 1.07× |
 | Run 4 (large, answer-first) | **0.084** | 0.050 | 1.68× |
+| CoT5 (Run 4 + attribute checklist CoT) | **0.084** | 0.042 | **2.00×** |
 
 Within InternVL, answer-first still helps (2B: 0.298 → 0.232, −22.1%; 8B: 0.098 → 0.084,
-−14.3%) and scale 2B → 8B is the dominant lever (answer-first: −63.8%). Best InternVL
-zero-shot so far: **Run 4, CI 0.084**. CoT1–CoT6 remain unscored on Codabench.
+−14.3%) and scale 2B → 8B is the dominant lever (answer-first: −63.8%). **CoT5 is a null
+on InternVL:** *Run 4 + attribute checklist CoT* ties free-form Run 4 exactly (both CI
+**0.084**), so the scaffold that cuts Qwen error by 16% relative (0.050 → 0.042) buys
+nothing here. Best InternVL zero-shot so far remains **Run 4 / CoT5, CI 0.084**. CoT1–CoT4
+and CoT6 are still unscored on Codabench.
 
 ### Known caveat: Run 3 and Run 5 precision
 
