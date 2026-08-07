@@ -14,7 +14,8 @@ and which two are **False** (hallucinated). Exactly one statement per image is c
 | Submission | Method | CI ↓ | Artifact |
 |------------|--------|:----:|----------|
 | QLoRA-Q7B-2k-image | QLoRA fine-tuned Qwen2.5-VL-7B, 2,000 training items | 0.0490 | `Test/qwen2p5-3b-7b/qlora-q7b-2k-image/` |
-| **QLoRA-Q7B-2.3k-image (best)** | **QLoRA fine-tuned Qwen2.5-VL-7B, 2,300 training items** | **0.0390** | `Test/qwen2p5-3b-7b/qlora-q7b-2p3k-image/` |
+| QLoRA-Q7B-2.3k-image | QLoRA fine-tuned Qwen2.5-VL-7B, 2,300 training items | 0.0390 | `Test/qwen2p5-3b-7b/qlora-q7b-2p3k-image/` |
+| **QLoRA-Q7B-2.6k-image (best)** | **QLoRA fine-tuned Qwen2.5-VL-7B, 2,600 training items** | **0.0350** | `Test/qwen2p5-3b-7b/qlora-q7b-2p6k-image/` |
 
 ### Dev Phase (devtest, 500 items)
 
