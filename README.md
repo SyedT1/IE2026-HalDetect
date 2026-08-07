@@ -9,6 +9,14 @@ and which two are **False** (hallucinated). Exactly one statement per image is c
 
 ## Results
 
+### Test Phase
+
+| Submission | Method | Score ↓ |
+|------------|--------|:-------:|
+| QLoRA-Q7B-2k-image | QLoRA fine-tuned Qwen2.5-VL-7B, 2,000 training items | **0.0490** |
+
+**Artifact:** `Test/qwen2p5-3b-7b/qlora-q7b-2k-image/`
+
 ### Dev Phase (devtest, 500 items)
 
 | Run | Method | CI ↓ | Combined Acc ↑ | CFHR ↓ | Q+ Acc ↑ | Q− Acc ↑ |
