@@ -12,3 +12,4 @@ experiments.txt
 # moment a file was renamed (prediction_en_DEV.zip, to keep a dev run from being clobbered
 # by its devtest re-run) and the *.zip rule quietly ate it again -- no error, no warning.
 !**/prediction_en*.zip
+experiments.txt
