@@ -18,6 +18,9 @@ and which two are **False** (hallucinated). Exactly one statement per image is c
 | **QLoRA-Q7B-2.6k-image (best)** | **QLoRA fine-tuned Qwen2.5-VL-7B, 2,600 training items** | **0.0350** | `Test/qwen2p5-3b-7b/qlora-q7b-2p6k-image/` |
 | QLoRA-Q7B-3k-image (legacy) | Resumed step-600 adapter from the nominal 3,000-item experiment | 0.0400 | `Test/qwen2p5-3b-7b/qlora-q7b-3k-image/` |
 
+All test-phase submissions used the same inference image budget:
+`MAX_PIXELS = 1024 × 28 × 28`.
+
 ### Dev Phase (devtest, 500 items)
 
 | Run | Method | CI ↓ | Combined Acc ↑ | CFHR ↓ | Q+ Acc ↑ | Q− Acc ↑ |
@@ -46,6 +49,37 @@ and which two are **False** (hallucinated). Exactly one statement per image is c
 | RunFT (2.6k) | QLoRA fine-tuned Qwen2.5-VL-7B + CoT5 prompt, 2,600 items | 0.034 | 0.966 | 0.000 | 0.966 | 0.983 |
 | RunFT | QLoRA fine-tuned Qwen2.5-VL-7B + CoT5 prompt, 2,000 items | 0.032 | 0.968 | 0.000 | 0.968 | 0.984 |
 | **RunFT (2.3k) (best)** | **QLoRA fine-tuned Qwen2.5-VL-7B + CoT5 prompt, 2,300 items** | **0.028** | **0.972** | **0.000** | **0.972** | **0.986** |
+
+#### Development-phase inference image budgets
+
+The audit covered all 59 notebooks under `Development/`; 52 contain a generation path,
+including training notebooks with internal checkpoint validation. The notebook that
+performs final inference was used for each experiment folder. When a folder has no
+separate inference notebook, the sole or combined experiment notebook was inspected.
+`MAX_PIXELS` is a maximum Qwen visual-input budget, not a forced square resize; the
+processor preserves the image aspect ratio.
+
+| Inference budget | Development runs / notebooks |
+|---|---|
+| `MAX_PIXELS = 512 × 28 × 28` | **Run 1** (`baseline/qwen2p5vl-baseline.ipynb`). The older combined 3B QLoRA train/eval notebook `finetune-qlora-q3b/qlora-3b-colab.ipynb` also evaluates at 512, but it is not a scored row in the main devtest table. |
+| `MAX_PIXELS = 768 × 28 × 28` | The matched **Baseline-3B / SFT-3B / DPO-3B** dev-split track under `finetune-qlora-q3b/`, including `qlora-3b-baseline-colab.ipynb` and the shared `kaggle-infer-q3b.ipynb`. The combined scaled and Unsloth 3B notebooks also evaluate at 768. |
+| `MAX_PIXELS = 1024 × 28 × 28` | **Runs 2–5**; **CoT1–CoT6**; all three **Run ADE** permutation inference passes; **RunFT-3B** 2k and 3k; all final 7B QLoRA inference notebooks (**RunFT** 2k, 2.3k, 2.6k, and 3k legacy). The prepared HP2–HP6 notebooks also use 1024, including the unscored Qwen3-VL-8B HP6 notebook. |
+| `MAX_PIXELS = 1280 × 28 × 28` | **Res1280 / HP1** and the prepared, unscored combined **HP7** notebook. |
+| Not applicable | The `permutation-ensembling-q7b/permutation-ensembling/` notebook only combines existing CSV predictions and does not load or process images. |
+
+InternVL2 does not expose Qwen's `MAX_PIXELS` option. Its corresponding resolution
+control is the number of 448×448 image tiles (plus a thumbnail):
+
+| InternVL image budget | Development runs / notebooks |
+|---|---|
+| `MAX_TILES = 6` | The standalone InternVL2-2B per-statement baseline notebook. |
+| `MAX_TILES = 12` | **Intern-R2, Intern-R3, Intern-R4, Intern-R5, Intern-CoT5**, and all remaining prepared InternVL2-8B CoT notebooks. Thus every scored InternVL run in the table above uses 12 tiles. |
+
+Training-time image budgets are separate from the final-inference groups above. The main
+Qwen 3B/7B QLoRA training notebooks use `MAX_PIXELS = 256 × 28 × 28`, while their
+standalone final inference notebooks use 1024. In the efficiency-focused 3B track, SFT
+training uses 768 and DPO training uses 384, while the matched reported inference for
+both uses 768.
 
 **RunFT (2.3k) reduces Contrastive Instability by 89.1% vs the baseline (0.257 → 0.028).**
 **RunFT (2.3k) reduces CI by a further 33.3% below the best zero-shot system (0.042 → 0.028).**
