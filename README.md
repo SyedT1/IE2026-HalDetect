@@ -13,6 +13,12 @@ and which two are **False** (hallucinated). Exactly one statement per image is c
 
 | Submission | Method | CI ↓ | Artifact |
 |------------|--------|:----:|----------|
+| CoT2-elimination | Qwen2.5-VL-7B, elimination CoT | 0.0730 | `Test/qwen2p5-3b-7b/All COT variations/cot-elimination/` |
+| CoT6-socratic | Qwen2.5-VL-7B, Socratic CoT | 0.0670 | `Test/qwen2p5-3b-7b/All COT variations/cot-socratic/` |
+| CoT4-devils-advocate | Qwen2.5-VL-7B, devil's-advocate CoT | 0.0660 | `Test/qwen2p5-3b-7b/All COT variations/cot-devils-advocate/` |
+| CoT1-evidence-first | Qwen2.5-VL-7B, evidence-first CoT | 0.0630 | `Test/qwen2p5-3b-7b/All COT variations/cot-evidence-first/` |
+| CoT5-attribute-checklist | Qwen2.5-VL-7B, attribute-checklist CoT | 0.0620 | `Test/qwen2p5-3b-7b/All COT variations/cot-attribute-checklist/` |
+| CoT3-confidence-ranked | Qwen2.5-VL-7B, confidence-ranked CoT | 0.0620 | `Test/qwen2p5-3b-7b/All COT variations/cot-confidence-ranked/` |
 | QLoRA-Q7B-2k-image | QLoRA fine-tuned Qwen2.5-VL-7B, 2,000 training items | 0.0490 | `Test/qwen2p5-3b-7b/qlora-q7b-2k-image/` |
 | QLoRA-Q7B-2.3k-image | QLoRA fine-tuned Qwen2.5-VL-7B, 2,300 training items | 0.0390 | `Test/qwen2p5-3b-7b/qlora-q7b-2p3k-image/` |
 | **QLoRA-Q7B-2.6k-image (best)** | **QLoRA fine-tuned Qwen2.5-VL-7B, 2,600 training items** | **0.0350** | `Test/qwen2p5-3b-7b/qlora-q7b-2p6k-image/` |
