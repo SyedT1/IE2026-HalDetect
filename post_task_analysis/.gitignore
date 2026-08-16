@@ -1,0 +1,7 @@
+cache/
+outputs/
+annotations/
+.jupyter/
+.mplconfig/
+*_executed.ipynb
+

@@ -20,12 +20,18 @@ and which two are **False** (hallucinated). Exactly one statement per image is c
 | CoT5-attribute-checklist | Qwen2.5-VL-7B, attribute-checklist CoT | 0.0620 | `Test/qwen2p5-3b-7b/All COT variations/cot-attribute-checklist/` |
 | CoT3-confidence-ranked | Qwen2.5-VL-7B, confidence-ranked CoT | 0.0620 | `Test/qwen2p5-3b-7b/All COT variations/cot-confidence-ranked/` |
 | QLoRA-Q7B-2k-image | QLoRA fine-tuned Qwen2.5-VL-7B, 2,000 training items | 0.0490 | `Test/qwen2p5-3b-7b/qlora-q7b-2k-image/` |
-| QLoRA-Q7B-2.3k-image | QLoRA fine-tuned Qwen2.5-VL-7B, 2,300 training items | 0.0390 | `Test/qwen2p5-3b-7b/qlora-q7b-2p3k-image/` |
+| QLoRA-Q7B-2348-image | QLoRA fine-tuned Qwen2.5-VL-7B, 2,348 training items | 0.0390 | `Test/qwen2p5-3b-7b/qlora-q7b-2p3k-image/` |
 | **QLoRA-Q7B-2.6k-image (best)** | **QLoRA fine-tuned Qwen2.5-VL-7B, 2,600 training items** | **0.0350** | `Test/qwen2p5-3b-7b/qlora-q7b-2p6k-image/` |
 | QLoRA-Q7B-3k-image (legacy) | Resumed step-600 adapter from the nominal 3,000-item experiment | 0.0400 | `Test/qwen2p5-3b-7b/qlora-q7b-3k-image/` |
 
 All test-phase submissions used the same inference image budget:
 `MAX_PIXELS = 1024 × 28 × 28`.
+
+**Selection disclosure.** We made 10 eligible Task 1b English test submissions before
+gold-label release: six prompting-only systems and four QLoRA adapters. The 2,600-item
+adapter is the post-hoc best of those 10 submissions (and best of four adapters), with CI
+0.035. A strict devtest-only protocol selects the exact 2,348-item adapter, whose test CI
+is 0.039. Both are reported to expose selection sensitivity.
 
 ### Dev Phase (devtest, 500 items)
 
@@ -54,7 +60,7 @@ All test-phase submissions used the same inference image budget:
 | RunFT (3k legacy) | Resumed step-600 QLoRA adapter from the nominal 3,000-item experiment | 0.0360 | — | — | — | — |
 | RunFT (2.6k) | QLoRA fine-tuned Qwen2.5-VL-7B + CoT5 prompt, 2,600 items | 0.034 | 0.966 | 0.000 | 0.966 | 0.983 |
 | RunFT | QLoRA fine-tuned Qwen2.5-VL-7B + CoT5 prompt, 2,000 items | 0.032 | 0.968 | 0.000 | 0.968 | 0.984 |
-| **RunFT (2.3k) (best)** | **QLoRA fine-tuned Qwen2.5-VL-7B + CoT5 prompt, 2,300 items** | **0.028** | **0.972** | **0.000** | **0.972** | **0.986** |
+| **RunFT (2,348) (best)** | **QLoRA fine-tuned Qwen2.5-VL-7B + CoT5 prompt, 2,348 items** | **0.028** | **0.972** | **0.000** | **0.972** | **0.986** |
 
 #### Development-phase inference image budgets
 
@@ -69,7 +75,7 @@ processor preserves the image aspect ratio.
 |---|---|
 | `MAX_PIXELS = 512 × 28 × 28` | **Run 1** (`baseline/qwen2p5vl-baseline.ipynb`). The older combined 3B QLoRA train/eval notebook `finetune-qlora-q3b/qlora-3b-colab.ipynb` also evaluates at 512, but it is not a scored row in the main devtest table. |
 | `MAX_PIXELS = 768 × 28 × 28` | The matched **Baseline-3B / SFT-3B / DPO-3B** dev-split track under `finetune-qlora-q3b/`, including `qlora-3b-baseline-colab.ipynb` and the shared `kaggle-infer-q3b.ipynb`. The combined scaled and Unsloth 3B notebooks also evaluate at 768. |
-| `MAX_PIXELS = 1024 × 28 × 28` | **Runs 2–5**; **CoT1–CoT6**; all three **Run ADE** permutation inference passes; **RunFT-3B** 2k and 3k; all final 7B QLoRA inference notebooks (**RunFT** 2k, 2.3k, 2.6k, and 3k legacy). The prepared HP2–HP6 notebooks also use 1024, including the unscored Qwen3-VL-8B HP6 notebook. |
+| `MAX_PIXELS = 1024 × 28 × 28` | **Runs 2–5**; **CoT1–CoT6**; all three **Run ADE** permutation inference passes; **RunFT-3B** 2k and 3k; all final 7B QLoRA inference notebooks (**RunFT** 2k, 2,348, 2.6k, and 3k legacy). The prepared HP2–HP6 notebooks also use 1024, including the unscored Qwen3-VL-8B HP6 notebook. |
 | `MAX_PIXELS = 1280 × 28 × 28` | **Res1280 / HP1** and the prepared, unscored combined **HP7** notebook. |
 | Not applicable | The `permutation-ensembling-q7b/permutation-ensembling/` notebook only combines existing CSV predictions and does not load or process images. |
 
@@ -87,37 +93,36 @@ standalone final inference notebooks use 1024. In the efficiency-focused 3B trac
 training uses 768 and DPO training uses 384, while the matched reported inference for
 both uses 768.
 
-**RunFT (2.3k) reduces Contrastive Instability by 89.1% vs the baseline (0.257 → 0.028).**
-**RunFT (2.3k) reduces CI by a further 33.3% below the best zero-shot system (0.042 → 0.028).**
-**RunFT (2.3k) reduces CI by 12.5% below the original 2,000-item fine-tune (RunFT, 0.032 → 0.028).**
+**RunFT (2,348) reduces Contrastive Instability by 89.1% vs the baseline (0.257 → 0.028).**
+**RunFT (2,348) reduces CI by a further 33.3% below the best zero-shot system (0.042 → 0.028).**
+**RunFT (2,348) reduces CI by 12.5% below the original 2,000-item fine-tune (RunFT, 0.032 → 0.028).**
 
 > **Key finding (RunFT):** QLoRA fine-tuning on 2,000 training items for 500 optimizer
 > steps with frozen vision encoder achieves CI 0.032 — surpassing all zero-shot and
 > prompting-based systems by a clear margin. This confirms that the 21 failures of the
 > best zero-shot system (CoT5/ADE) were learnable from labelled examples and were not
 > irreducible at 7B scale — they required task-specific adaptation of the LLM layers.
-> (Superseded by RunFT (2.3k) below, CI 0.028.)
+> (Superseded by RunFT (2,348) below, CI 0.028.)
 
-> **Key finding (RunFT (2.3k)):** increasing the 7B QLoRA fine-tuning set from 2,000 to
-> 2,300 items — same frozen-vision-encoder, LoRA-rank-8 recipe, same CoT5 inference
-> prompt — drops CI further from 0.032 to **0.028**, a 12.5% relative reduction, making
-> this the new best system overall and the first to clear both the zero-shot ceiling
-> (CoT5/ADE, 0.042) and the original 2,000-item fine-tune by a wide margin. This shows
-> training-set size has not saturated at 7B scale either: the same data-volume lever that
-> helped 3B (RunFT-3B → RunFT-3B (3k), −12.0% from +1,000 items) also helps 7B, and at a
-> proportionally smaller data increase (+300 items). A later nominal 3,000-item legacy
+> **Key finding (RunFT (2,348)):** increasing the 7B QLoRA fine-tuning set from 2,000 to
+> 2,348 items — same frozen-vision-encoder, LoRA-rank-8 recipe, same CoT5 inference
+> prompt — drops the devtest CI point estimate from 0.032 to **0.028**, a 12.5% relative
+> reduction, and clears the zero-shot ceiling (CoT5/ADE, 0.042). The paired bootstrap
+> interval for this 0.004 difference is [−0.006, 0.016], so it does not establish a
+> reproducible data-scaling effect. The exact 2,348-item count is a +348-item increase.
+> A later nominal 3,000-item legacy
 > run scored CI 0.036, but its resumed sessions did not preserve dataloader position;
 > therefore a clean one-epoch evaluation over all 3,000 items remains untested.
 
 > **Key finding (RunFT (2.6k)):** increasing the 7B QLoRA fine-tuning set further from
-> 2,300 to **2,600** items — same frozen-vision-encoder, LoRA-rank-8 recipe, same CoT5
+> 2,348 to **2,600** items — same frozen-vision-encoder, LoRA-rank-8 recipe, same CoT5
 > inference prompt — does **not** continue the improvement: CI rises from 0.028 to
 > **0.034** (Combined Acc 0.966, Q+ 0.966, Q− 0.983, CFHR 0.000; duration not recorded).
-> That is a 21.4% relative *regression* vs RunFT (2.3k) and is also slightly worse than
+> That is a 21.4% relative *regression* vs RunFT (2,348) and is also slightly worse than
 > the original 2,000-item RunFT (0.032). RunFT (2.6k) still beats every zero-shot system
 > (CoT5/ADE, 0.042) by 19.0% relative, so fine-tuning remains clearly beneficial, but the
-> 7B data-volume curve is **non-monotonic**: 2,000 → 2,300 helped, while 2,300 → 2,600
-> hurt. The sweet spot among the three tested subsample sizes is therefore **2,300 items**,
+> 7B data-volume curve is **non-monotonic**: 2,000 → 2,348 helped, while 2,348 → 2,600
+> hurt. The best point estimate among the three tested subsample sizes is therefore **2,348 items**,
 > not "more is better." The nominal 3,000-item legacy run (CI 0.036) does not resolve
 > the curve because its resumed training did not cover a clean 3,000-item epoch.
 
@@ -155,8 +160,8 @@ The gains decompose cleanly across orthogonal factors:
 | QLoRA fine-tuning at 3B scale (frozen vision encoder) | Run 5 (3B, ans-first) → RunFT-3B | −39.0% |
 | Training-set size 2,000 → 3,000 items (3B QLoRA, same recipe) | RunFT-3B → RunFT-3B (3k) | −12.0% |
 | QLoRA fine-tuning at 7B scale (frozen vision encoder) | CoT5 → RunFT | −23.8% |
-| **Training-set size 2,000 → 2,300 items (7B QLoRA, same recipe)** | **RunFT → RunFT (2.3k)** | **−12.5%** |
-| Training-set size 2,300 → 2,600 items (7B QLoRA, same recipe) | RunFT (2.3k) → RunFT (2.6k) | **+21.4%** ✗ |
+| **Training-set size 2,000 → 2,348 items (7B QLoRA, same recipe)** | **RunFT → RunFT (2,348)** | **−12.5%** |
+| Training-set size 2,348 → 2,600 items (7B QLoRA, same recipe) | RunFT (2,348) → RunFT (2.6k) | **+21.4%** ✗ |
 | Answer-first vs reason-first (InternVL2-2B) | Intern-R3 → Intern-R5 | −22.1% |
 | Answer-first vs reason-first (InternVL2-8B) | Intern-R2 → Intern-R4 | −14.3% |
 | Model scale InternVL2-2B → 8B (answer-first) | Intern-R5 → Intern-R4 | −63.8% |
@@ -208,20 +213,20 @@ failed to beat a stronger peer under the same recipe, or were otherwise inconclu
 | CoT2 — elimination | 0.056 | Falsification framing hurts; model rebuttals anchor to distractor vocabulary |
 | Res1280 — higher resolution | 0.054 | MAX_PIXELS=1280×28×28 hurts vs 1024×28×28; extra visual tokens diffuse attention |
 | RunFT-3B — QLoRA fine-tuning at 3B scale, 2,000 items | 0.050 | Ties Run 4 zero-shot but does not beat best zero-shot (CoT5, 0.042) or 7B fine-tune (RunFT, 0.032); model capacity, not adaptation, is the binding constraint at 3B |
-| RunFT (3k legacy) — resumed step-600 QLoRA adapter from the nominal 3,000-item 7B experiment | 0.0360 | Worse than RunFT 2k (0.032), RunFT 2.3k (0.028), and RunFT 2.6k (0.034); resume sessions restarted shuffled dataloaders, so this is not a clean full-3k comparison |
-| RunFT (2.6k) — QLoRA at 7B, 2,600-item subsample | 0.034 | Beats zero-shot (CoT5 0.042) but *worse* than RunFT 2k (0.032) and RunFT 2.3k (0.028); 7B data-volume curve is non-monotonic — more training items is not always better |
+| RunFT (3k legacy) — resumed step-600 QLoRA adapter from the nominal 3,000-item 7B experiment | 0.0360 | Worse than RunFT 2k (0.032), RunFT 2,348 (0.028), and RunFT 2.6k (0.034); resume sessions restarted shuffled dataloaders, so this is not a clean full-3k comparison |
+| RunFT (2.6k) — QLoRA at 7B, 2,600-item subsample | 0.034 | Beats zero-shot (CoT5 0.042) but *worse* than RunFT 2k (0.032) and RunFT 2,348 (0.028); 7B data-volume curve is non-monotonic — more training items is not always better |
 | Cultural grounding hint (Run A6) | — | Devtest submission zeroed due to wrong split; dev results inconclusive |
 
 These results establish that CI=0.042 is the ceiling for **training-free** methods at 7B
 scale under zero-shot inference. Fine-tuning breaks through this ceiling at every data
 cleanly tested size — RunFT (2,000 items, CI 0.032), RunFT (2.6k) (2,600 items,
-CI 0.034), and RunFT (2.3k) (2,300 items, CI 0.028, current best system overall) — confirming the
+CI 0.034), and RunFT (2,348) (2,348 items, CI 0.028, best devtest point estimate) — confirming the
 remaining zero-shot failures were learnable rather than irreducible. RunFT-3B (2,000
 items, CI 0.050) shows the same recipe at 3B scale is insufficient to reach the
 zero-shot ceiling; more training data helps at 3B too (RunFT-3B (3k), 3,000 items,
 CI 0.044), but still falls well short of either 7B fine-tune. Data volume is a real
-lever at **both** scales, but it is **not monotonic** at 7B: 2,000 → 2,300 improved CI
-by 12.5% relative, while 2,300 → 2,600 *regressed* by 21.4% relative (CI 0.028 → 0.034),
+lever at **both** scales, but it is **not monotonic** at 7B: 2,000 → 2,348 improved CI
+by 12.5% relative, while 2,348 → 2,600 *regressed* by 21.4% relative (CI 0.028 → 0.034),
 landing slightly worse than the original 2,000-item run. The 3B fine-tune improved
 12.0% from +1,000 items (2,000 → 3,000). The 3B-vs-7B capacity gap remains the larger
 effect: even RunFT-3B (3k)'s best result (0.044) is worse than RunFT's original,
@@ -550,8 +555,8 @@ $$\hat{y}_i = \arg\max_{j \in \{1,2,3\}} P_{\theta_0, \Phi^{*}}(j \mid \mathcal{
 **Result:** CI **0.032**, Combined Acc **0.968**, CFHR **0.000**, Q+ **0.968**, Q− **0.984**.
 This is a 23.8% further reduction below the best zero-shot system (CoT5/ADE, CI=0.042),
 confirming that the 21 remaining zero-shot failures were learnable from labelled examples
-rather than irreducible at 7B scale. (Superseded by RunFT (2.3k) below, CI 0.028 — see
-that section for the 2,000→2,300-item follow-up.)
+rather than irreducible at 7B scale. (Superseded by RunFT (2,348) below, CI 0.028 — see
+that section for the 2,000→2,348-item follow-up.)
 
 **Speed:** inference ~40 minutes on T4 (same as zero-shot, base model + adapter load).
 
@@ -628,37 +633,34 @@ task: more training data helps at the margin, but scaling the backbone helps mor
 
 ---
 
-### RunFT (2.3k) — QLoRA Fine-tuned Qwen2.5-VL-7B, 2,300 items (best overall)
+### RunFT (2,348) — QLoRA Fine-tuned Qwen2.5-VL-7B, 2,348 items (best devtest point estimate)
 
 **Base model:** `Qwen2.5-VL-7B-Instruct`, 4-bit NF4 QLoRA
-**Training data:** 2,300 items subsampled from `train_en.jsonl` (vs. the 2,000-item
+**Training data:** 2,348 items subsampled from `train_en.jsonl` (vs. the 2,000-item
 subsample used for RunFT above; 3,000 total available)
 **Training:** frozen vision encoder, LoRA rank 8 on LLM layers only — identical recipe to
 RunFT, same training notebook (`finetune/finetune-qlora-train-v6-selfcontained.ipynb`)
-with the training subsample size increased from 2,000 to 2,300 items; training duration
+with the training subsample size increased from 2,000 to 2,348 items; training duration
 not recorded
 **Inference prompt:** CoT5 attribute checklist, answer-first (`finetune/qlora-infer-final.ipynb`)
 
 This isolates the effect of training-set size at fixed model scale (7B) and fixed LoRA
 recipe, mirroring the RunFT-3B → RunFT-3B (3k) comparison but on the larger backbone:
 
-$$\Phi_{7B,2.3k}^{*} = \arg\min_{\Phi} \mathcal{L}(\Phi; \theta_0^{7B}) \ \text{over all } N=2300 \text{ training items}$$
+$$\Phi_{7B,2348}^{*} = \arg\min_{\Phi} \mathcal{L}(\Phi; \theta_0^{7B}) \ \text{over all } N=2348 \text{ training items}$$
 
-$$\hat{y}_i = \arg\max_{j \in \{1,2,3\}} P_{\theta_0^{7B}, \Phi_{7B,2.3k}^{*}}(j \mid \mathcal{I}_i, s_i^{(1)}, s_i^{(2)}, s_i^{(3)}, c^{(\text{CoT5})})$$
+$$\hat{y}_i = \arg\max_{j \in \{1,2,3\}} P_{\theta_0^{7B}, \Phi_{7B,2348}^{*}}(j \mid \mathcal{I}_i, s_i^{(1)}, s_i^{(2)}, s_i^{(3)}, c^{(\text{CoT5})})$$
 
 **Result:** CI **0.028**, Combined Acc **0.972**, CFHR **0.000**, Q+ **0.972**, Q− **0.986**.
 Training/inference duration not recorded for this run.
 
-$$\text{CI(RunFT)} - \text{CI(RunFT (2.3k))} = 0.032 - 0.028 = 0.004 \quad (-12.5\% \text{ relative})$$
+$$\text{CI(RunFT)} - \text{CI(RunFT (2,348))} = 0.032 - 0.028 = 0.004 \quad (-12.5\% \text{ relative})$$
 
-**Takeaway:** a modest 300-item increase in training data (2,000 → 2,300, +15%) yields a
-12.5% relative CI reduction at 7B scale — comparable in relative terms to the 12.0%
-reduction that a much larger 1,000-item increase (+50%) bought at 3B scale
-(RunFT-3B → RunFT-3B (3k)). This suggests 7B may be more data-efficient per additional
-labelled item than 3B in the mid-subsample regime, though the two comparisons differ in
-both absolute and relative data increase, so this is suggestive rather than a controlled
-comparison. A further increase to 2,600 items, however, does **not** continue the
-trend — see RunFT (2.6k) below. RunFT (2.3k) remains the best system produced by this
+**Takeaway:** a 348-item increase in training data (2,000 → 2,348, +17.4%) changes the
+devtest CI point estimate by −0.004. Its paired bootstrap interval [−0.006, 0.016]
+crosses zero, so we do not infer that 7B is more data-efficient or that the gain will
+replicate across training seeds. A further increase to 2,600 items does **not** continue the
+trend — see RunFT (2.6k) below. RunFT (2,348) remains the best devtest point estimate produced by this
 project to date.
 
 ---
@@ -667,9 +669,9 @@ project to date.
 
 **Base model:** `Qwen2.5-VL-7B-Instruct`, 4-bit NF4 QLoRA
 **Training data:** 2,600 items subsampled from `train_en.jsonl` (vs. 2,000 for RunFT and
-2,300 for RunFT (2.3k); 3,000 total available). Subsample is deterministic (`SEED=42`).
+2,348 for RunFT (2,348); 3,000 total available). Subsample is deterministic (`SEED=42`).
 **Training:** frozen vision encoder, LoRA rank 8 on LLM layers only — same recipe as
-RunFT / RunFT (2.3k); `TRAIN_SUBSAMPLE_N=2600`, `MAX_STEPS=510`; training notebooks under
+RunFT / RunFT (2,348); `TRAIN_SUBSAMPLE_N=2600`, `MAX_STEPS=510`; training notebooks under
 `Development/qwen2p5-3b-7b/qwen-q7b-2p6k-image/` (`resume-from-checkpoint-300.ipynb`);
 training duration not recorded (Codabench duration field = −1.0)
 **Inference prompt:** CoT5 attribute checklist, answer-first
@@ -684,19 +686,19 @@ $$\hat{y}_i = \arg\max_{j \in \{1,2,3\}} P_{\theta_0^{7B}, \Phi_{7B,2.6k}^{*}}(j
 **Result:** CI **0.034**, Combined Acc **0.966**, CFHR **0.000**, Q+ **0.966**, Q− **0.983**.
 Duration not recorded (−1.0 on the leaderboard).
 
-$$\text{CI(RunFT (2.3k))} - \text{CI(RunFT (2.6k))} = 0.028 - 0.034 = -0.006 \quad (+21.4\% \text{ relative CI, regression})$$
+$$\text{CI(RunFT (2,348))} - \text{CI(RunFT (2.6k))} = 0.028 - 0.034 = -0.006 \quad (+21.4\% \text{ relative CI, regression})$$
 
 $$\text{CI(RunFT)} - \text{CI(RunFT (2.6k))} = 0.032 - 0.034 = -0.002 \quad (+6.3\% \text{ relative CI vs 2k})$$
 
-**Takeaway:** among the three 7B QLoRA subsample sizes tested — 2,000 / 2,300 / 2,600 —
-the CI curve is **non-monotonic**: 0.032 → **0.028** → 0.034. Adding 300 items past the
-2.3k sweet spot *hurts* rather than helps, and the 2.6k run even lands slightly worse
+**Takeaway:** among the three 7B QLoRA subsample sizes tested — 2,000 / 2,348 / 2,600 —
+the CI point estimates are **non-monotonic**: 0.032 → **0.028** → 0.034. Adding 252 items past the
+2,348 point estimate *hurts* rather than helps, and the 2.6k run even lands slightly worse
 than the original 2k run. Fine-tuning still clearly beats the zero-shot ceiling
 (CoT5/ADE 0.042 → 0.034, −19.0% relative), so the failures remain learnable; the lesson
 is that data volume must be tuned, not maximised. A nominal 3,000-item legacy run scored
 CI **0.036** on devtest and **0.0400** on the 1,000-image test phase, but its resumed
 sessions restarted shuffled dataloaders instead of continuing the prior sample order.
-It is therefore not a clean full-data point and cannot determine whether 2.3k is a local
+It is therefore not a clean full-data point and cannot determine whether 2,348 is a local
 optimum or whether a correctly trained full-data model recovers (or worsens further).
 
 ---
@@ -779,14 +781,14 @@ quirks (`use_flash_attn=False`, `transformers==4.49.0`, `MAX_TILES` as the resol
 
 ## System Comparison
 
-| | R1 | R3 | R2 | R5 | CoT2 | Res1280 | R4 | **FT-3B** | CoT4 | CoT3 | CoT6 | CoT1 | **FT-3B (3k)** | CoT5 | ADE | **FT (2.6k)** | **FT** | **FT (2.3k)** |
+| | R1 | R3 | R2 | R5 | CoT2 | Res1280 | R4 | **FT-3B** | CoT4 | CoT3 | CoT6 | CoT1 | **FT-3B (3k)** | CoT5 | ADE | **FT (2.6k)** | **FT** | **FT (2,348)** |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 | Model | 3B | 3B | 7B | 3B | 7B | 7B | 7B | **3B+LoRA** | 7B | 7B | 7B | 7B | **3B+LoRA** | 7B | 7B×3 | **7B+LoRA** | **7B+LoRA** | **7B+LoRA** |
 | Passes | 3 | 1 | 1 | 1 | 1 | 1 | 1 | **1** | 1 | 1 | 1 | 1 | **1** | 1 | 3 | **1** | **1** | **1** |
 | Joint | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | **✅** | ✅ | ✅ | ✅ | ✅ | **✅** | ✅ | ✅ | **✅** | **✅** | **✅** |
 | Ans first | — | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | **✅** | ✅ | ✅ | ✅ | ✅ | **✅** | ✅ | ✅ | **✅** | **✅** | **✅** |
 | CoT style | — | free | free | free | elim | free | free | **attr** | devil | rank | socratic | evid | **attr** | attr | free | **attr** | **attr** | **attr** |
-| Train items | — | — | — | — | — | — | — | **2,000** | — | — | — | — | **3,000** | — | — | **2,600** | **2,000** | **2,300** |
+| Train items | — | — | — | — | — | — | — | **2,000** | — | — | — | — | **3,000** | — | — | **2,600** | **2,000** | **2,348** |
 | Fine-tuned | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | **✅** | ❌ | ❌ | ❌ | ❌ | **✅** | ❌ | ❌ | **✅** | **✅** | **✅** |
 | Ensemble | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
 | CI ↓ | 0.257 | 0.142 | 0.092 | 0.082 | 0.056 | 0.054 | 0.050 | **0.050** | 0.048 | 0.046 | 0.046 | 0.044 | **0.044** | 0.042 | 0.042 | **0.034** | **0.032** | **0.028** |
@@ -913,10 +915,10 @@ ds = load_dataset("QCRI/AynVQA-ArabicNLP26", "task1b_en", split="devtest")
 | RunFT-3B train | same as RunFT train, `VLM_MODEL = Qwen/Qwen2.5-VL-3B-Instruct` | T4×2 | not recorded |
 | RunFT-3B infer | same as RunFT infer, `VLM_MODEL = Qwen/Qwen2.5-VL-3B-Instruct` | T4 | not recorded |
 | RunFT-3B (3k) infer | `finetune/step-3-qlora-q3b-3k-inference.ipynb` — 3B adapter retrained on the full 3,000-item train set, `SPLIT='devtest'` | T4×2 | not recorded (CI 0.044 via Codabench) |
-| RunFT (2.3k) train | same as RunFT train, training subsample increased from 2,000 to 2,300 items | T4×2 | not recorded |
-| RunFT (2.3k) infer | same as RunFT infer (`finetune/qlora-infer-final.ipynb`), `SPLIT='devtest'` | T4 | not recorded (CI 0.028 via Codabench, current best) |
+| RunFT (2,348) train | same as RunFT train, training subsample increased from 2,000 to 2,348 items | T4×2 | not recorded |
+| RunFT (2,348) infer | same as RunFT infer (`finetune/qlora-infer-final.ipynb`), `SPLIT='devtest'` | T4 | not recorded (CI 0.028 via Codabench, best devtest point estimate) |
 | RunFT (2.6k) train | `Development/qwen2p5-3b-7b/qwen-q7b-2p6k-image/resume-from-checkpoint-300.ipynb` (`TRAIN_SUBSAMPLE_N=2600`, `MAX_STEPS=510`) | T4×2 | not recorded |
-| RunFT (2.6k) infer | `Development/qwen2p5-3b-7b/qwen-q7b-2p6k-image/inference-qlora-2p6k-q7b-v1.ipynb`, `SPLIT='devtest'` | T4 | not recorded (CI 0.034 via Codabench; non-monotonic vs 2.3k) |
+| RunFT (2.6k) infer | `Development/qwen2p5-3b-7b/qwen-q7b-2p6k-image/inference-qlora-2p6k-q7b-v1.ipynb`, `SPLIT='devtest'` | T4 | not recorded (CI 0.034 via Codabench; non-monotonic vs 2,348) |
 | RunFT (3k legacy) train | `Development/qwen2p5-3b-7b/qlora-q7b-3k-image/step1-qlora-3k-q7b-upto-200ckpt.ipynb` → `step2-continue-from-200chkpoint.ipynb` → `step3-from-chkpoint-500.ipynb` | T4×2 | resumed legacy run; packaged step 600; dataloader position not preserved |
 | RunFT (3k legacy) infer | `Development/qwen2p5-3b-7b/qlora-q7b-3k-image/inference-qlora-q7b-frn.ipynb` | T4×2 | devtest CI 0.0360; test-phase CI 0.0400 via `Test/qwen2p5-3b-7b/qlora-q7b-3k-image/` |
 | Intern-R3 | `Development/internvl-2b-8b/joint-3-i2b/joint-3-stat-internvl2b.ipynb` | T4 | not recorded (CI 0.298 via Codabench) |

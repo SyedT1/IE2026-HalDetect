@@ -13,3 +13,4 @@ experiments.txt
 # by its devtest re-run) and the *.zip rule quietly ate it again -- no error, no warning.
 !**/prediction_en*.zip
 experiments.txt
+latex_paper_works/
