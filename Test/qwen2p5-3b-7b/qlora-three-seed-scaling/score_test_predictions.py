@@ -31,7 +31,7 @@ from huggingface_hub import hf_hub_download
 
 HERE = Path(__file__).parent
 REPO = HERE.parents[2]                      # repo root
-Q7B = HERE.parent                           # Development/qwen2p5-3b-7b
+Q7B = HERE.parent                           # Test/qwen2p5-3b-7b
 
 SPLITS = ("test", "devtest", "dev", "train")
 
@@ -41,12 +41,15 @@ TARGETS = [
     (2348, 42,  "Test/qwen2p5-3b-7b/qlora-q7b-2p3k-image/prediction_en.zip"),
     (2600, 42,  "Test/qwen2p5-3b-7b/qlora-q7b-2p6k-image/prediction_en.zip"),
     (3000, 42,  "Test/qwen2p5-3b-7b/qlora-q7b-3k-image/prediction_en.zip"),
-    (2000, 13,  "Development/qwen2p5-3b-7b/qlora-three-seed-scaling/2k/prediction_seed13_2k_q7b.zip"),
-    (2000, 73,  "Development/qwen2p5-3b-7b/qlora-three-seed-scaling/2k/prediction_seed73-2k-q7b.zip"),
-    (2000, 101, "Development/qwen2p5-3b-7b/qlora-three-seed-scaling/2k/prediction_seed101_2k_q7b.zip"),
-    (2348, 13,  "Development/qwen2p5-3b-7b/qlora-three-seed-scaling/2348/prediction_seed13_2p3k_q7b.zip"),
-    (2348, 73,  "Development/qwen2p5-3b-7b/qlora-three-seed-scaling/2348/prediction_seed73_2p3k_q7b.zip"),
-    (2348, 101, "Development/qwen2p5-3b-7b/qlora-three-seed-scaling/2348/prediction_seed101_2p3k_q7b.zip"),
+    (2000, 13,  "Test/qwen2p5-3b-7b/qlora-three-seed-scaling/2k/prediction_seed13_2k_q7b.zip"),
+    (2000, 73,  "Test/qwen2p5-3b-7b/qlora-three-seed-scaling/2k/prediction_seed73-2k-q7b.zip"),
+    (2000, 101, "Test/qwen2p5-3b-7b/qlora-three-seed-scaling/2k/prediction_seed101_2k_q7b.zip"),
+    (2348, 13,  "Test/qwen2p5-3b-7b/qlora-three-seed-scaling/2348/prediction_seed13_2p3k_q7b.zip"),
+    (2348, 73,  "Test/qwen2p5-3b-7b/qlora-three-seed-scaling/2348/prediction_seed73_2p3k_q7b.zip"),
+    (2348, 101, "Test/qwen2p5-3b-7b/qlora-three-seed-scaling/2348/prediction_seed101_2p3k_q7b.zip"),
+    (2600, 13,  "Test/qwen2p5-3b-7b/qlora-three-seed-scaling/2600/prediction_q7b_2p6k_seed13 _en.zip"),
+    (2600, 73,  "Test/qwen2p5-3b-7b/qlora-three-seed-scaling/2600/prediction_q7b_n2600_seed_73_en.zip"),
+    (2600, 101, "Test/qwen2p5-3b-7b/qlora-three-seed-scaling/2600/prediction_q7b_2p6k_seed101_en.zip"),
 ]
 
 

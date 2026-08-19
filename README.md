@@ -40,7 +40,7 @@ carries `labels`), so test CI can be recomputed offline from the committed predi
 ZIPs without a Codabench submission:
 
 ```powershell
-python Development\qwen2p5-3b-7b\qlora-three-seed-scaling\score_test_predictions.py
+python Test\qwen2p5-3b-7b\qlora-three-seed-scaling\score_test_predictions.py
 ```
 
 The scorer reproduces all four published seed-42 test CIs exactly (0.049 / 0.039 / 0.035
@@ -48,36 +48,54 @@ The scorer reproduces all four published seed-42 test CIs exactly (0.049 / 0.039
 exactly one `true` per item on all 1,000 items, so `CI = 1 − Combined Acc` and CFHR = 0
 throughout.
 
-Three additional training seeds (13, 73, 101) were then trained and scored at the two
-completed sizes. Dataset membership is held fixed by a deterministic seed-42 permutation
+Three additional training seeds (13, 73, 101) were then trained and scored at **all four**
+training sizes. Dataset membership is held fixed by a deterministic seed-42 permutation
 with nested prefixes (2,000 ⊂ 2,348 ⊂ 2,600 ⊂ 3,000), so seed varies only LoRA
 initialization, dataloader order, dropout, and RNG state — not which items are trained on.
 
-| n | Seed 13 | Seed 73 | Seed 101 | Seed 42 (paper) | Seeds 13/73/101 | 4 seeds |
+| n | Seed 13 | Seed 73 | Seed 101 | Seed 42 (submitted) | Fresh mean | 4-seed mean |
 |---:|:---:|:---:|:---:|:---:|:---:|:---:|
 | 2,000 | 0.0390 | 0.0390 | 0.0410 | 0.0490 | 0.0397 ± 0.0012 | 0.0420 ± 0.0048 |
 | 2,348 | 0.0430 | 0.0410 | **0.0370** | 0.0390 | 0.0403 ± 0.0031 | 0.0400 ± 0.0026 |
+| 2,600 | 0.0380 | 0.0440 | 0.0400 | **0.0350** | 0.0407 ± 0.0031 | 0.0393 ± 0.0039 |
+| 3,000 | 0.0380 | 0.0450 | 0.0390 | 0.0400 | 0.0407 ± 0.0038 | 0.0405 ± 0.0031 |
 
-(mean ± sample standard deviation; artifacts under
-`Development/qwen2p5-3b-7b/qlora-three-seed-scaling/{2k,2348}/`)
+(mean ± sample standard deviation over the three fresh seeds; all 16 runs: mean 0.0404,
+sd 0.0034, range 0.035–0.049. Artifacts under
+`Test/qwen2p5-3b-7b/qlora-three-seed-scaling/`; the 3,000-item fresh-seed CIs are
+recorded from their runs, whose prediction archives are not committed.)
 
-> **Key finding (seed variance):** the 2,000 → 2,348 data-scaling effect **does not
-> survive reseeding**. On the paper seed alone the step reads as a −0.010 test-CI win
-> (0.049 → 0.039). Across seeds 13/73/101 the same step is **+0.0007** — flat, and in the
-> wrong direction. The per-seed deltas do not even agree in sign: 13 +0.004, 73 +0.002,
-> 101 −0.004, 42 −0.010. Seed 42 at n=2,000 (0.049) is the outlier of the eight scored
-> runs; the other three 2,000-item seeds land at 0.039–0.041, i.e. on top of the 2,348
-> band. The published improvement is therefore mostly an unlucky baseline seed, not a
-> data-volume effect. At 1,000 test items one flipped item moves CI by 0.001, so the
-> entire effect is ~10 items. This matches, and is stronger than, the devtest paired
-> bootstrap interval [−0.006, 0.016] already reported for the same comparison.
+> **Key finding (seed variance):** the 7B data-scaling curve **does not survive
+> reseeding**. Fresh-seed means are flat across the entire size axis — 0.0397, 0.0403,
+> 0.0407, 0.0407, a spread of 0.0010, i.e. **one test item**. On seed 42 alone the same
+> axis spans 0.049 → 0.035 (**fourteen items**) and reads as a clean monotone improvement
+> up to 2,600 items. Per-seed 2,000 → 2,600 deltas disagree in sign and magnitude
+> (13 −0.001, 73 +0.005, 101 −0.001, 42 −0.014), and each seed prefers a different size:
+> 13 → 2,600, 73 → 2,000, 101 → 2,348, 42 → 2,600. At 1,000 test items one flipped item
+> moves CI by 0.001, so the entire published effect is ten to fourteen items. This is
+> consistent with, and stronger than, the devtest paired bootstrap intervals already
+> reported for the same comparisons, which crossed zero.
 
-This does not overturn the 2,600 result (test CI 0.035, still the best single run), but
-that number is also a single seed and, on this evidence, carries a seed uncertainty of
-roughly ±0.003–0.005 — comparable to the entire spread between the tested subsample
-sizes. Seeds 13/73/101 at n=2,600 and n=3,000 have training notebooks but no adapters or
-predictions yet; reseeding those two cells is the outstanding work needed before any
-7B data-volume curve can be claimed.
+The submitted 2,600 run (test CI 0.035) is the best of all 16 runs and remains our
+headline result, but the three fresh seeds at that size average 0.0407 — slightly
+*worse* than the 2,000-item fresh mean. "More data helps up to 2,600 items" is therefore
+one fortunate seed at 2,600 paired with one unfortunate seed at 2,000, not a reproducible
+data-volume effect.
+
+**Seed disagreement.** Adapters differing only in training seed disagree on 16–32 of
+1,000 predictions:
+
+| n | 13–73 | 13–101 | 13–42 | 73–101 | 73–42 | 101–42 |
+|---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| 2,000 | 17 | 16 | 24 | 23 | 22 | 28 |
+| 2,348 | 22 | 19 | 23 | 18 | 23 | 23 |
+| 2,600 | 23 | 32 | 24 | 22 | 20 | 24 |
+
+At n=2,000, seeds 13 and 73 both score CI 0.039 yet disagree on 17 items — identical
+leaderboard scores, different systems. Across the 12 archived runs 92.0% of items are
+correct everywhere, 1.8% nowhere, and **6.2% flip with the seed**; every size difference
+above lives inside that 6.2%. An oracle over the 12 runs would reach CI 0.018, while no
+majority vote beats 0.035.
 
 ### Dev Phase (devtest, 500 items)
 
@@ -159,9 +177,9 @@ both uses 768.
 > A later nominal 3,000-item legacy
 > run scored CI 0.036, but its resumed sessions did not preserve dataloader position;
 > therefore a clean one-epoch evaluation over all 3,000 items remains untested.
-> **Superseded by the seed-variance re-scoring above:** three fresh training seeds show
-> this 2,000 → 2,348 step is flat on the test split (+0.0007 mean), so it should be read
-> as seed noise rather than a data-scaling gain.
+> **Superseded by the seed-variance re-scoring above:** three fresh training seeds at all
+> four sizes show this step is flat on the test split (fresh means 0.0397 → 0.0403), so it
+> should be read as seed noise rather than a data-scaling gain.
 
 > **Key finding (RunFT (2.6k)):** increasing the 7B QLoRA fine-tuning set further from
 > 2,348 to **2,600** items — same frozen-vision-encoder, LoRA-rank-8 recipe, same CoT5
@@ -174,10 +192,11 @@ both uses 768.
 > hurt. The best point estimate among the three tested subsample sizes is therefore **2,348 items**,
 > not "more is better." The nominal 3,000-item legacy run (CI 0.036) does not resolve
 > the curve because its resumed training did not cover a clean 3,000-item epoch.
-> **Caveat from the seed-variance re-scoring:** every point on this curve is a single
-> seed, and measured seed noise at 2,000/2,348 items is ±0.003–0.005 CI — the same order
-> as the differences between the curve's points. The non-monotonicity is therefore not
-> established either; 2,600 and 3,000 still need reseeding.
+> **Superseded by the seed-variance re-scoring:** every point on this curve is a single
+> seed. Reseeding all four sizes (13/73/101) gives flat fresh means — 0.0397, 0.0403,
+> 0.0407, 0.0407 on test, a spread of one item — so neither the 2,000 → 2,348 gain nor
+> the 2,348 → 2,600 regression is reproducible, and the "non-monotonic curve" is a
+> single-seed artifact rather than a property of the recipe.
 
 > **Key finding (RunFT-3B):** QLoRA fine-tuning the smaller Qwen2.5-VL-3B model on the
 > same 2,000-item subset lands at CI 0.050 — exactly matching zero-shot Run 4 (7B,
@@ -213,8 +232,8 @@ The gains decompose cleanly across orthogonal factors:
 | QLoRA fine-tuning at 3B scale (frozen vision encoder) | Run 5 (3B, ans-first) → RunFT-3B | −39.0% |
 | Training-set size 2,000 → 3,000 items (3B QLoRA, same recipe) | RunFT-3B → RunFT-3B (3k) | −12.0% |
 | QLoRA fine-tuning at 7B scale (frozen vision encoder) | CoT5 → RunFT | −23.8% |
-| Training-set size 2,000 → 2,348 items (7B QLoRA, same recipe) — *single seed; flat (+1.7%) across seeds 13/73/101 on test* | RunFT → RunFT (2,348) | −12.5% ⚠ |
-| Training-set size 2,348 → 2,600 items (7B QLoRA, same recipe) | RunFT (2,348) → RunFT (2.6k) | **+21.4%** ✗ |
+| Training-set size 2,000 → 2,348 items (7B QLoRA, same recipe) — *single seed; flat across seeds 13/73/101 on test* | RunFT → RunFT (2,348) | −12.5% ⚠ |
+| Training-set size 2,348 → 2,600 items (7B QLoRA, same recipe) — *single seed; flat across seeds 13/73/101 on test* | RunFT (2,348) → RunFT (2.6k) | +21.4% ⚠ |
 | Answer-first vs reason-first (InternVL2-2B) | Intern-R3 → Intern-R5 | −22.1% |
 | Answer-first vs reason-first (InternVL2-8B) | Intern-R2 → Intern-R4 | −14.3% |
 | Model scale InternVL2-2B → 8B (answer-first) | Intern-R5 → Intern-R4 | −63.8% |
@@ -269,7 +288,7 @@ failed to beat a stronger peer under the same recipe, or were otherwise inconclu
 | RunFT (3k legacy) — resumed step-600 QLoRA adapter from the nominal 3,000-item 7B experiment | 0.0360 | Worse than RunFT 2k (0.032), RunFT 2,348 (0.028), and RunFT 2.6k (0.034); resume sessions restarted shuffled dataloaders, so this is not a clean full-3k comparison |
 | RunFT (2.6k) — QLoRA at 7B, 2,600-item subsample | 0.034 | Beats zero-shot (CoT5 0.042) but *worse* than RunFT 2k (0.032) and RunFT 2,348 (0.028); 7B data-volume curve is non-monotonic — more training items is not always better |
 | Cultural grounding hint (Run A6) | — | Devtest submission zeroed due to wrong split; dev results inconclusive |
-| Three-seed replication of the 2,000 → 2,348 data-scaling win (7B QLoRA) | 0.0397 → 0.0403 (test, seeds 13/73/101) | The step is flat/slightly negative once the training seed is varied; the paper seed's −0.010 test gain (0.049 → 0.039) is driven by an outlier 2,000-item run. Measured seed noise ±0.003–0.005 CI is the same size as the reported data-volume effects |
+| Three-seed replication of the whole 7B data-scaling curve | fresh means 0.0397 / 0.0403 / 0.0407 / 0.0407 at 2,000 / 2,348 / 2,600 / 3,000 (test, seeds 13/73/101) | Flat across the entire size axis — a one-item spread — while seed 42 alone spans 0.049 → 0.035. Per-seed 2,000 → 2,600 deltas disagree in sign (13 −0.001, 73 +0.005, 101 −0.001, 42 −0.014) and each seed prefers a different size. Seed-only disagreement is 16–32 of 1,000 items, larger than every effect being compared |
 
 These results establish that CI=0.042 is the ceiling for **training-free** methods at 7B
 scale under zero-shot inference. Fine-tuning breaks through this ceiling at every data
@@ -923,11 +942,11 @@ IE2026-HalDetect/
     ├── finetune-qlora-q3b/         # 3B QLoRA-SFT + DPO track (dev split)
     └── permutation-ensembling-q7b/ # ADE majority-vote combiner artifacts
 
-Development/qwen2p5-3b-7b/qlora-three-seed-scaling/
+Test/qwen2p5-3b-7b/qlora-three-seed-scaling/
 ├── 2k/ 2348/ 2600/ 3000/           # 12 training notebooks (seeds 13/73/101 × 4 sizes);
-│                                   #   2k and 2348 also hold adapters + prediction ZIPs
+│                                   #   2k, 2348 and 2600 also hold adapters + prediction ZIPs
 ├── score_test_predictions.py       # offline CI scorer vs the released test/devtest keys
-└── test_scores.json                # scored output (10 runs)
+└── test_scores.json                # scored output (13 runs)
 ```
 
 Qwen Run 3 / Run 5 notebooks live under `qwen2p5-3b-7b/` with `VLM_MODEL` switched to the
@@ -955,7 +974,7 @@ ds = load_dataset("QCRI/AynVQA-ArabicNLP26", "task1b_en", split="devtest")
 The devtest and test keys were blind during the competition. They are now published in
 **QCRI/ImageEval-ArabicNLP26** (`task1b/devtest_en.jsonl`, `task1b/test_en.jsonl`, each
 record carrying `labels`), so both phases can be scored offline — see
-`Development/qwen2p5-3b-7b/qlora-three-seed-scaling/score_test_predictions.py`.
+`Test/qwen2p5-3b-7b/qlora-three-seed-scaling/score_test_predictions.py`.
 
 ---
 
@@ -992,8 +1011,8 @@ record carrying `labels`), so both phases can be scored offline — see
 | Intern-R4 | `Development/internvl-2b-8b/answer-first-joint-i8b/answer-first-internvl8b.ipynb` | T4 | not recorded (CI 0.084 via Codabench; tied best InternVL zero-shot) |
 | Intern-CoT5 (Intern-R4 + attribute checklist CoT) | `Development/internvl-2b-8b/all-COT-variations-i8b/attribute-checklist/cot-attribute-checklist.ipynb` | T4 | not recorded (CI 0.084 via Codabench; ties free-form Intern-R4 — null vs Qwen CoT5) |
 
-| Seed replication (2,000 / 2,348 items, seeds 13/73/101) | `Development/qwen2p5-3b-7b/qlora-three-seed-scaling/{2k,2348}/train_q7b_qlora_n*_seed*.ipynb` | T4×2 | one clean epoch each; see that folder's README |
-| Offline test/devtest scoring | `Development/qwen2p5-3b-7b/qlora-three-seed-scaling/score_test_predictions.py` | None | <1 min (CPU; reproduces all four seed-42 test CIs exactly) |
+| Seed replication (2,000 / 2,348 / 2,600 / 3,000 items, seeds 13/73/101) | `Test/qwen2p5-3b-7b/qlora-three-seed-scaling/{2k,2348,2600,3000}/train_q7b_qlora_n*_seed*.ipynb` | T4×2 | one clean epoch each; see that folder's README |
+| Offline test/devtest scoring | `Test/qwen2p5-3b-7b/qlora-three-seed-scaling/score_test_predictions.py` | None | <1 min (CPU; reproduces all four seed-42 test CIs exactly) |
 
 1. Upload notebook to Kaggle → enable T4 GPU → add HF_TOKEN secret
 2. Set `SPLIT = 'dev'` to score locally; `SPLIT = 'devtest'` for Codabench submission

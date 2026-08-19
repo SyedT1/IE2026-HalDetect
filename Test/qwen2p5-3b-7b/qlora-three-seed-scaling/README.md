@@ -15,7 +15,7 @@ separate.
 
 All runs use one clean epoch, batch size 1, and gradient accumulation 4. Seed 42 is
 excluded from the matrix because it is the historical paper run; it is still reported
-below as the fourth seed of each completed size.
+below as the fourth seed of each size.
 
 ## Test-split results (1,000 items)
 
@@ -24,55 +24,74 @@ The Task-1b `test` answer key is now public (`QCRI/ImageEval-ArabicNLP26`,
 committed prediction ZIPs — no Codabench submission needed. Reproduce with:
 
 ```powershell
-python Development\qwen2p5-3b-7b\qlora-three-seed-scaling\score_test_predictions.py
+python Test\qwen2p5-3b-7b\qlora-three-seed-scaling\score_test_predictions.py
 ```
 
 `CI = 1 - (items fully correct) / (items at least partly correct)`, the Codabench 1b
 scorer. Every run emits exactly one `true` per item on all 1,000 items, so here
 `CI = 1 - combined accuracy` and `CFHR = 0`.
 
-| n | Seed | CI ↓ | Combined Acc ↑ | Q+ Acc ↑ | Q− Acc ↑ | Artifact |
-|---:|---:|:---:|:---:|:---:|:---:|---|
-| 2,000 | 13 | 0.0390 | 0.9610 | 0.9610 | 0.9805 | `2k/prediction_seed13_2k_q7b.zip` |
-| 2,000 | 73 | 0.0390 | 0.9610 | 0.9610 | 0.9805 | `2k/prediction_seed73-2k-q7b.zip` |
-| 2,000 | 101 | 0.0410 | 0.9590 | 0.9590 | 0.9795 | `2k/prediction_seed101_2k_q7b.zip` |
-| 2,000 | 42 (paper) | 0.0490 | 0.9510 | 0.9510 | 0.9755 | `Test/qwen2p5-3b-7b/qlora-q7b-2k-image/prediction_en.zip` |
-| 2,348 | 13 | 0.0430 | 0.9570 | 0.9570 | 0.9785 | `2348/prediction_seed13_2p3k_q7b.zip` |
-| 2,348 | 73 | 0.0410 | 0.9590 | 0.9590 | 0.9795 | `2348/prediction_seed73_2p3k_q7b.zip` |
-| 2,348 | 101 | **0.0370** | **0.9630** | 0.9630 | 0.9815 | `2348/prediction_seed101_2p3k_q7b.zip` |
-| 2,348 | 42 (paper) | 0.0390 | 0.9610 | 0.9610 | 0.9805 | `Test/qwen2p5-3b-7b/qlora-q7b-2p3k-image/prediction_en.zip` |
-| 2,600 | 42 (paper) | 0.0350 | 0.9650 | 0.9650 | 0.9825 | `Test/qwen2p5-3b-7b/qlora-q7b-2p6k-image/prediction_en.zip` |
-| 3,000 | 42 (paper, legacy) | 0.0400 | 0.9600 | 0.9600 | 0.9800 | `Test/qwen2p5-3b-7b/qlora-q7b-3k-image/prediction_en.zip` |
+### Full matrix — test CI by training size and seed
+
+| n | Seed 13 | Seed 73 | Seed 101 | Seed 42 (submitted) | Fresh mean ± sd | 4-seed mean ± sd |
+|---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| 2,000 | 0.0390 | 0.0390 | 0.0410 | 0.0490 | 0.0397 ± 0.0012 | 0.0420 ± 0.0048 |
+| 2,348 | 0.0430 | 0.0410 | **0.0370** | 0.0390 | 0.0403 ± 0.0031 | 0.0400 ± 0.0026 |
+| 2,600 | 0.0380 | 0.0440 | 0.0400 | **0.0350** | 0.0407 ± 0.0031 | 0.0393 ± 0.0039 |
+| 3,000 | 0.0380 | 0.0450 | 0.0390 | 0.0400 | 0.0407 ± 0.0038 | 0.0405 ± 0.0031 |
+
+"Fresh" = seeds 13/73/101 only. All 16 runs: mean 0.0404, sd 0.0034, range 0.035–0.049.
+
+Per-run detail (combined accuracy = 1 − CI, Q+ = combined, Q− = 1 − CI/2, CFHR = 0 for
+every row):
+
+| n | Seed | CI ↓ | Artifact |
+|---:|---:|:---:|---|
+| 2,000 | 13 / 73 / 101 | 0.0390 / 0.0390 / 0.0410 | `2k/prediction_seed{13,73,101}_2k_q7b.zip` |
+| 2,000 | 42 | 0.0490 | `../qlora-q7b-2k-image/prediction_en.zip` |
+| 2,348 | 13 / 73 / 101 | 0.0430 / 0.0410 / 0.0370 | `2348/prediction_seed{13,73,101}_2p3k_q7b.zip` |
+| 2,348 | 42 | 0.0390 | `../qlora-q7b-2p3k-image/prediction_en.zip` |
+| 2,600 | 13 / 73 / 101 | 0.0380 / 0.0440 / 0.0400 | `2600/prediction_q7b_*_seed*_en.zip` |
+| 2,600 | 42 | 0.0350 | `../qlora-q7b-2p6k-image/prediction_en.zip` |
+| 3,000 | 13 / 73 / 101 | 0.0380 / 0.0450 / 0.0390 | run scores; prediction archives not committed |
+| 3,000 | 42 (legacy) | 0.0400 | `../qlora-q7b-3k-image/prediction_en.zip` |
 
 The four seed-42 rows reproduce the published root-README test CIs exactly, which
-validates the offline scorer against the Codabench numbers.
+validates the offline scorer against the Codabench numbers. The 3,000-item fresh-seed
+CIs are recorded from their runs; those prediction archives are not in the repo, so
+`score_test_predictions.py` covers the other 13 runs.
+The 3,000 seed-42 row is the *legacy* resumed step-600 adapter, not a clean one-epoch run.
 
-The 2,600 and 3,000 cells have training notebooks only — no adapters and no predictions
-yet — so seeds 13/73/101 are unscored at those sizes. The 3,000 seed-42 row is the
-*legacy* resumed step-600 adapter, not a clean one-epoch run.
+### Finding: the data-scaling curve is entirely a seed artifact
 
-### Seed variance
+Fresh-seed means are flat across the whole size axis — 0.0397, 0.0403, 0.0407, 0.0407 —
+a total spread of 0.0010, i.e. **one test item**. On seed 42 alone the same axis spans
+0.049 → 0.035, i.e. **fourteen items**, and reads as a clean monotone improvement up to
+2,600 items.
 
-| n | Seeds 13/73/101 | 4 seeds (incl. 42) | Range (4 seeds) |
-|---:|:---:|:---:|:---:|
-| 2,000 | 0.0397 ± 0.0012 | 0.0420 ± 0.0048 | 0.039 – 0.049 |
-| 2,348 | 0.0403 ± 0.0031 | 0.0400 ± 0.0026 | 0.037 – 0.043 |
+Per-seed 2,000 → 2,600 deltas do not agree in sign or magnitude: 13 −0.001, 73 +0.005,
+101 −0.001, 42 −0.014. Each seed also prefers a different training size: seed 13 is best
+at 2,600, seed 73 at 2,000, seed 101 at 2,348, seed 42 at 2,600.
 
-(mean ± sample standard deviation)
+The submitted 2,600 run (0.035) is the best of all 16 runs, but the three fresh seeds at
+that same size average 0.0407 — slightly *worse* than the 2,000-item fresh mean. The
+published "more data helps up to 2,600" conclusion is therefore not reproducible: it is
+one fortunate seed at 2,600 combined with one unfortunate seed at 2,000.
 
-**Finding: the 2,000 → 2,348 data-scaling effect does not survive reseeding.** On the
-paper seed alone the step looks like a clear −0.010 CI win (0.049 → 0.039). Across seeds
-13/73/101 the same step is +0.0007 — flat, and in the wrong direction. The per-seed
-deltas do not even agree in sign: 13 +0.004, 73 +0.002, 101 −0.004, 42 −0.010.
+### Seed disagreement
 
-Seed 42 at n=2,000 (0.049) is the outlier of the eight scored runs; the other three
-2,000-item seeds land at 0.039–0.041. The published 2,000 → 2,348 improvement is
-therefore mostly an unlucky baseline seed, not a data-volume effect. At 1,000 test items
-one flipped item moves CI by 0.001, so the whole effect is ~10 items.
+Adapters that differ **only** in training seed disagree on 16–32 of 1,000 predictions:
 
-This does not overturn the 2,600 result (CI 0.035), which remains the best single run —
-but that number is also a single seed and, on this evidence, carries a seed uncertainty
-of roughly ±0.003–0.005. Reseeding 2,600 and 3,000 is the outstanding work.
+| n | 13–73 | 13–101 | 13–42 | 73–101 | 73–42 | 101–42 |
+|---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| 2,000 | 17 | 16 | 24 | 23 | 22 | 28 |
+| 2,348 | 22 | 19 | 23 | 18 | 23 | 23 |
+| 2,600 | 23 | 32 | 24 | 22 | 20 | 24 |
+
+At n=2,000, seeds 13 and 73 both score CI 0.039 yet disagree on 17 items — identical
+scores, different systems. Across the 12 archived runs, 92.0% of items are correct
+everywhere, 1.8% nowhere, and **6.2% flip with the seed**; every size difference in the
+table above lives inside that 6.2%. An oracle over the 12 runs would reach CI 0.018.
 
 ## Controlled data design
 
@@ -150,5 +169,5 @@ smaller artifact intended for inference.
 The notebooks share one canonical builder to prevent configuration drift:
 
 ```powershell
-python Development\qwen2p5-3b-7b\qlora-three-seed-scaling\build_training_notebooks.py
+python Test\qwen2p5-3b-7b\qlora-three-seed-scaling\build_training_notebooks.py
 ```
